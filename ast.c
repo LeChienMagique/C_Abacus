@@ -288,6 +288,11 @@ ASTNode* ast_next_term(Token** tokens) {
                 append_child(term->children, optor);
                 // append_child(term, );
             }
+            else {
+                optor->children = term->children;
+                term->children = NULL;
+                append_child(term, optor);
+            }
         }
         else {
             optor->children = term->children;
@@ -326,9 +331,28 @@ ASTNode* ast_next_expr(Token** tokens) {
     // {operator term}
     ASTNode* optor = ast_next_operator(tokens);
     while (optor) {
-        optor->children = expr->children;
-        expr->children = NULL;
-        append_child(expr, optor);
+        if (ast_is_operator(expr->children)) {
+            // expr->children replace with last operator
+            if (get_operator_precedence(expr->children) < get_operator_precedence(optor)) {
+                ASTNode* before_last_operand = expr->children->children;
+                for (unsigned int i = 0; i < get_operator_arity(expr->children) - get_operator_arity(optor); i++) {
+                    before_last_operand = before_last_operand->next;
+                }
+                optor->children = before_last_operand->next;
+                before_last_operand->next = NULL;
+                append_child(expr->children, optor);
+                // append_child(expr, );
+            } else {
+                optor->children = expr->children;
+                expr->children = NULL;
+                append_child(expr, optor);
+            }
+        }
+        else {
+            optor->children = expr->children;
+            expr->children = NULL;
+            append_child(expr, optor);
+        }
 
         term = ast_next_term(tokens);
         append_child(optor, term);
