@@ -1,15 +1,18 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-#define TOKEN_INT 1
-#define TOKEN_PLUS 2
-#define TOKEN_MINUS 3
-#define TOKEN_MULT 4
-#define TOKEN_PARENTHESIS 5
+
+typedef enum {
+    TOKEN_INT,
+    TOKEN_PLUS,
+    TOKEN_MINUS,
+    TOKEN_MULT,
+    TOKEN_PARENTHESIS,
+} TokenType;
 
 typedef struct Token {
     char* value;
-    int type;
+    TokenType type;
     struct Token* next;
 } Token;
 
