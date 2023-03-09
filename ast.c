@@ -77,18 +77,14 @@ void append_child(ASTNode* node, ASTNode* child) {
 }
 
 /*
-1 + 1
-
-program -> expr -> ((term -> operand -> number 1) (operator +) (term -> operand -> number 1))
-
 program = expr
 
-expr = [+ | -] term {operator term}
+expr = term {operator term}
 
-term = operand {operator operand}
+term = [unary] operand {operator operand}
 
 operand = number
-        | ( expr )
+        | '(' expr ')'
 
 operator = + | - | * | /
 */
@@ -97,6 +93,66 @@ ASTNode* ast_next_operator(Token** tokens);
 ASTNode* ast_next_term(Token** tokens);
 ASTNode* ast_next_operand(Token** tokens);
 ASTNode* ast_next_number(Token** tokens);
+
+bool ast_is_operator(ASTNode* node) {
+    switch (node->type) {
+        case NODE_MINUS:
+        case NODE_PLUS:
+        case NODE_DIV:
+        case NODE_MULT: {
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
+}
+
+OpArity get_operator_arity(ASTNode* optor) {
+    switch (optor->type) {
+        case NODE_MINUS: {
+            return AR_MINUS;
+        }
+        case NODE_PLUS: {
+            return AR_PLUS;
+        }
+        case NODE_MULT: {
+            return AR_MULT;
+        }
+        case NODE_DIV: {
+            return AR_DIV;
+        }
+        default: {
+            printf("[ERROR] operator arity not implemented for: ");
+            print_node(optor);
+            printf("\n");
+            assert(false);
+        }
+    }
+}
+
+OpPrecedence get_operator_precedence(ASTNode* optor) {
+    switch (optor->type) {
+        case NODE_MINUS: {
+            return OP_MINUS;
+        }
+        case NODE_PLUS: {
+            return OP_PLUS;
+        }
+        case NODE_MULT: {
+            return OP_MULT;
+        }
+        case NODE_DIV: {
+            return OP_DIV;
+        }
+        default: {
+            printf("[ERROR] operator precedence not implemented for: ");
+            print_node(optor);
+            printf("\n");
+            assert(false);
+        }
+    }
+}
 
 ASTNode* ast_next_number(Token** tokens) {
     if (*tokens == NULL) {
@@ -220,9 +276,24 @@ ASTNode* ast_next_term(Token** tokens) {
     // {operator operand}
     ASTNode* optor = ast_next_operator(tokens);
     while (optor != NULL) {
-        optor->children = term->children;
-        term->children = NULL;
-        append_child(term, optor);
+        if (ast_is_operator(term->children)) {
+            // term->children replace with last operator
+            if (get_operator_precedence(term->children) < get_operator_precedence(optor)) {
+                ASTNode* before_last_operand = term->children->children;
+                for (unsigned int i = 0; i < get_operator_arity(term->children) - get_operator_arity(optor); i++) {
+                    before_last_operand = before_last_operand->next;
+                }
+                optor->children = before_last_operand->next;
+                before_last_operand->next = NULL;
+                append_child(term->children, optor);
+                // append_child(term, );
+            }
+        }
+        else {
+            optor->children = term->children;
+            term->children = NULL;
+            append_child(term, optor);
+        }
 
         operand = ast_next_operand(tokens);
         append_child(optor, operand);

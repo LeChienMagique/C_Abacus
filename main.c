@@ -23,8 +23,10 @@ int evaluate_input(char* input) {
     return result;
 }
 
-void run_default() {
-    char* input = "-45 + 45 + 90 - 123";
+void run_default(char* input) {
+    if (input == NULL) {
+        input = "6 - 3 * 2";
+    }
 
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
@@ -46,13 +48,12 @@ void run_default() {
     printf("\n\n");
 
     int result = interpret_ast(ast);
-    printf("Input: %s | Result: %d\n", input, result);
-    // assert(result == 5);
+    printf("%s = %d\n", input, result);
 }
 
 void print_usage() {
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  ./main : run default input\n");
+    fprintf(stderr, "  ./main <optional: input>: run input or default\n");
     fprintf(stderr, "  ./main test run : run tests\n");
     fprintf(stderr, "  ./main test save : save expected results\n");
     exit(1);
@@ -60,13 +61,16 @@ void print_usage() {
 
 
 int main(int argc, char** argv) {
-    // TODO: float
     // TODO: operator precedence
+    // TODO: float
     // TODO: functions (sqrt, ...)
     // TODO: use automaton to tokenize
 
     if (argc == 1) {
-        run_default();
+        run_default(NULL);
+    }
+    else if (argc == 2) {
+        run_default(argv[1]);
     } else if (argc == 3) {
         if (strcmp(argv[1], "test") != 0) {
             fprintf(stderr, "Unknown argument: %s\n", argv[1]);
