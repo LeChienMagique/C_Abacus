@@ -7,15 +7,24 @@
 
 #include "./token.h"
 #include "./ast.h"
+#include "./test.h"
 
+int evaluate_input(char* input) {
+    Token* tokens = calloc(1, sizeof(Token));
+    Token* sentinel = tokens;
+    size_t index = 0;
+    while (index < strlen(input)) {
+        tokens->next = next_token(input, &index);
+        tokens = tokens->next;
+    }
 
-int main() {
-    // TODO: float
-    // TODO: operator precedence
-    // TODO: functions (sqrt, ...)
+    ASTNode* ast = build_AST(&(sentinel->next));
+    int result = interpret_ast(ast);
+    return result;
+}
 
-    // TODO: use automaton to tokenize
-    char* input = "-2 * 4";
+void run_default() {
+    char* input = "-45 + 45 + 90 - 123";
 
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
@@ -39,6 +48,43 @@ int main() {
     int result = interpret_ast(ast);
     printf("Input: %s | Result: %d\n", input, result);
     // assert(result == 5);
+}
+
+void print_usage() {
+    fprintf(stderr, "Usage:\n");
+    fprintf(stderr, "  ./main : run default input\n");
+    fprintf(stderr, "  ./main test run : run tests\n");
+    fprintf(stderr, "  ./main test save : save expected results\n");
+    exit(1);
+}
+
+
+int main(int argc, char** argv) {
+    // TODO: float
+    // TODO: operator precedence
+    // TODO: functions (sqrt, ...)
+    // TODO: use automaton to tokenize
+
+    if (argc == 1) {
+        run_default();
+    } else if (argc == 3) {
+        if (strcmp(argv[1], "test") != 0) {
+            fprintf(stderr, "Unknown argument: %s\n", argv[1]);
+            print_usage();
+        }
+
+        if (strcmp(argv[2], "run") == 0) {
+            tests_run();
+        } else if (strcmp(argv[2], "save") == 0) {
+            tests_save();
+        } else {
+            fprintf(stderr, "Unknown argument: %s\n", argv[2]);
+            print_usage();
+        }
+    } else {
+        fprintf(stderr, "Wrong number of arguments\n");
+        print_usage();
+    }
 
     return 0;
 }
