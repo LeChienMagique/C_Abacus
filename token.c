@@ -115,6 +115,11 @@ Token* next_token(char* input, size_t* index) {
         }
         else {
             printf("[ERROR] not implemented at index %lu\n", *index);
+            printf("%s\n", input);
+            for (size_t i = 0; i < *index; i++) {
+                printf(" ");
+            }
+            printf("^\n");
             assert(false);
         }
 

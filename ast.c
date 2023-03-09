@@ -92,6 +92,11 @@ operand = number
 
 operator = + | - | * | /
 */
+ASTNode* ast_next_expr(Token** tokens);
+ASTNode* ast_next_operator(Token** tokens);
+ASTNode* ast_next_term(Token** tokens);
+ASTNode* ast_next_operand(Token** tokens);
+ASTNode* ast_next_number(Token** tokens);
 
 ASTNode* ast_next_number(Token** tokens) {
     if (*tokens == NULL) {
@@ -170,39 +175,6 @@ ASTNode* ast_next_operator(Token** tokens) {
     return optor;
 }
 
-ASTNode* ast_next_term(Token** tokens) {
-    if (*tokens == NULL) {
-        return NULL;
-    }
-    // term = operand {operator operand}
-    ASTNode* term = create_node(NULL, NODE_TERM);
-
-    // operand
-    ASTNode* operand = ast_next_operand(tokens);
-    if (operand == NULL) {
-        printf("Expected operand got: ");
-        print_token(*tokens);
-        printf("\n");
-        assert(false);
-    }
-    append_child(term, operand);
-
-    // {operator operand}
-    ASTNode* optor = ast_next_operator(tokens);
-    while (optor != NULL) {
-        optor->children = term->children;
-        term->children = NULL;
-        append_child(term, optor);
-
-        operand = ast_next_operand(tokens);
-        append_child(optor, operand);
-
-        optor = ast_next_operator(tokens);
-    }
-    return term;
-}
-
-
 ASTNode* ast_next_unary(Token** tokens) {
     ASTNode* node;
     switch ((*tokens)->type) {
@@ -220,19 +192,56 @@ ASTNode* ast_next_unary(Token** tokens) {
     return node;
 }
 
+ASTNode* ast_next_term(Token** tokens) {
+    if (*tokens == NULL) {
+        return NULL;
+    }
+    // term = [+ | -] operand {operator operand}
+    ASTNode* term = create_node(NULL, NODE_TERM);
+
+    // [+ | -]
+    ASTNode* unary = ast_next_unary(tokens);
+
+    // operand
+    ASTNode* operand = ast_next_operand(tokens);
+    if (operand == NULL) {
+        printf("Expected operand got: ");
+        print_token(*tokens);
+        printf("\n");
+        assert(false);
+    }
+    if (unary) {
+        append_child(unary, operand);
+        append_child(term, unary);
+    } else {
+        append_child(term, operand);
+    }
+
+    // {operator operand}
+    ASTNode* optor = ast_next_operator(tokens);
+    while (optor != NULL) {
+        optor->children = term->children;
+        term->children = NULL;
+        append_child(term, optor);
+
+        operand = ast_next_operand(tokens);
+        append_child(optor, operand);
+
+        optor = ast_next_operator(tokens);
+    }
+    return term;
+}
+
+
+
 ASTNode* ast_next_expr(Token** tokens) {
     if (*tokens == NULL) {
         return NULL;
     }
 
-    // expr = [+ | -] term {operator term}
+    // expr = term {operator term}
     ASTNode* expr = create_node(NULL, NODE_EXPR);
 
-    // [+ | -]
-    ASTNode* unary = ast_next_unary(tokens);
-    if (unary) {
-        append_child(unary, expr);
-    }
 
     // term
     ASTNode* term = ast_next_term(tokens);
@@ -255,7 +264,7 @@ ASTNode* ast_next_expr(Token** tokens) {
 
         optor = ast_next_operator(tokens);
     }
-    return unary ? unary : expr;
+    return expr;
 }
 
 ASTNode* build_AST(Token** tokens) {
