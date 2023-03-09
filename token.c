@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+#include <err.h>
 
 #include "./token.h"
 
@@ -19,6 +20,9 @@ void print_type(int token_type) {
         } break;
         case TOKEN_PARENTHESIS: {
             printf("TokenParenthesis");
+        } break;
+        case TOKEN_MULT: {
+            printf("TokenMult");
         } break;
         default: {
             printf("UnknownToken");
@@ -76,8 +80,12 @@ Token* token_next_operator(char* input, size_t* index) {
             token->type = TOKEN_MINUS;
             token->value = "-";
         } break;
+        case '*': {
+            token->type = TOKEN_MULT;
+            token->value = "*";
+        } break;
         default: {
-            printf("%c operator not implemented\n", c);
+            printf("[ERROR] %c operator not implemented\n", c);
             assert(false);
         }
     }
@@ -103,7 +111,7 @@ Token* next_token(char* input, size_t* index) {
             return token;
         }
         else {
-            printf("not implemented at index %lu\n", *index);
+            printf("[ERROR] not implemented at index %lu\n", *index);
             assert(false);
         }
 

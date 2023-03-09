@@ -8,9 +8,10 @@
 #include "./token.h"
 #include "./ast.h"
 
+
 int main() {
     // TODO: use automaton to tokenize
-    char* input = "1 + 1";
+    char* input = "2 * 4 + 5";
 
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
@@ -29,6 +30,11 @@ int main() {
 
     ASTNode* ast = build_AST(&(sentinel->next));
     print_AST(ast);
+    printf("\n\n");
+
+    int result = interpret_ast(ast);
+    printf("Input: %s | Result: %d\n", input, result);
+    // assert(result == 5);
 
     return 0;
 }

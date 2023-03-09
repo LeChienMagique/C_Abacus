@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <err.h>
 #include <assert.h>
 #include "./ast.h"
 
@@ -21,6 +22,9 @@ void print_node(ASTNode* node) {
         case NODE_TERM: {
             printf("NodeTerm");
         } break;
+        case NODE_MULT: {
+            printf("NodeMult");
+        } break;
         default: {
             printf("UnknownNode");
         }
@@ -32,9 +36,9 @@ void print_node(ASTNode* node) {
 }
 
 void print_AST(ASTNode* root) {
-    printf("(");
+    // printf("(");
     print_node(root);
-    printf(")");
+    // printf(")");
     if (root->children == NULL) {
         return;
     }
@@ -47,6 +51,7 @@ void print_AST(ASTNode* root) {
     }
     printf("}");
 }
+
 
 ASTNode* create_node(Token* token, int type) {
     ASTNode* node = calloc(1, sizeof(ASTNode));
@@ -139,6 +144,10 @@ ASTNode* ast_next_operator(Token** tokens) {
             optor->type = NODE_MINUS;
             optor->value = "-";
         } break;
+        case TOKEN_MULT: {
+            optor->type = NODE_MULT;
+            optor->value = "*";
+        } break;
         default: {
             free(optor);
             return NULL;
@@ -205,5 +214,35 @@ ASTNode* ast_next_expr(Token** tokens) {
 }
 
 ASTNode* build_AST(Token** tokens) {
-    return ast_next_expr(tokens);
+    ASTNode* ast = ast_next_expr(tokens);
+    if (*tokens) {
+        assert(false && "[ERROR] leftover tokens");
+    }
+    return ast;
+}
+
+int interpret_ast(ASTNode* node) {
+    switch (node->type) {
+        case NODE_EXPR:
+        case NODE_TERM: {
+            return interpret_ast(node->children);
+        }
+        case NODE_PLUS: {
+            return interpret_ast(node->children) + interpret_ast(node->children->next);
+        }
+        case NODE_MINUS: {
+            return interpret_ast(node->children) - interpret_ast(node->children->next);
+        }
+        case NODE_MULT: {
+            return interpret_ast(node->children) * interpret_ast(node->children->next);
+        }
+        case NODE_INT: {
+            return *((int*)node->value);
+        }
+        default: {
+            printf("unimplemented node: ");
+            print_node(node);
+            assert(false);
+        }
+    }
 }

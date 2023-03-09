@@ -4,7 +4,8 @@
 #define TOKEN_INT 1
 #define TOKEN_PLUS 2
 #define TOKEN_MINUS 3
-#define TOKEN_PARENTHESIS 4
+#define TOKEN_MULT 4
+#define TOKEN_PARENTHESIS 5
 
 typedef struct Token {
     char* value;

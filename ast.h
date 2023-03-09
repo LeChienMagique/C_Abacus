@@ -2,16 +2,19 @@
 #define AST_H
 #include "./token.h"
 
-#define NODE_INT 1
-#define NODE_PLUS 2
-#define NODE_MINUS 3
-#define NODE_EXPR 4
-#define NODE_TERM 5
+typedef enum {
+    NODE_INT,
+    NODE_PLUS,
+    NODE_MINUS,
+    NODE_MULT,
+    NODE_EXPR,
+    NODE_TERM,
+} NodeType;
 
 typedef struct ASTNode {
     Token* token;
     void* value;
-    int type;
+    NodeType type;
     struct ASTNode* children;
     struct ASTNode* next;
 } ASTNode;
@@ -26,4 +29,5 @@ void print_node(ASTNode* node);
 void print_AST(ASTNode* root);
 
 ASTNode* build_AST(Token** tokens);
+int interpret_ast(ASTNode* node);
 #endif // AST_H
