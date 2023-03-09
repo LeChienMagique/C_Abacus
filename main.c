@@ -10,8 +10,12 @@
 
 
 int main() {
+    // TODO: float
+    // TODO: operator precedence
+    // TODO: functions (sqrt, ...)
+
     // TODO: use automaton to tokenize
-    char* input = "2 * 4 + 5";
+    char* input = "-2 * 4";
 
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;

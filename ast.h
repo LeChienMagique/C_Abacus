@@ -5,7 +5,9 @@
 typedef enum {
     NODE_INT,
     NODE_PLUS,
+    NODE_UPLUS,
     NODE_MINUS,
+    NODE_UMINUS,
     NODE_MULT,
     NODE_EXPR,
     NODE_TERM,

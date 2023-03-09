@@ -18,8 +18,11 @@ void print_type(int token_type) {
         case TOKEN_MINUS: {
             printf("TokenMinus");
         } break;
-        case TOKEN_PARENTHESIS: {
-            printf("TokenParenthesis");
+        case TOKEN_OPARENTHESIS: {
+            printf("TokenOpenParenthesis");
+        } break;
+        case TOKEN_CPARENTHESIS: {
+            printf("TokenCloseParenthesis");
         } break;
         case TOKEN_MULT: {
             printf("TokenMult");
@@ -105,7 +108,7 @@ Token* next_token(char* input, size_t* index) {
             return token_next_operator(input, index);
         } else if (c == '(' || c == ')') {
             Token* token = calloc(1, sizeof(Token));
-            token->type = TOKEN_PARENTHESIS;
+            token->type = c == ')' ? TOKEN_CPARENTHESIS : TOKEN_OPARENTHESIS;
             token->value = c == ')' ? ")" : "(";
             (*index)++;
             return token;

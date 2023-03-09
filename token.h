@@ -7,7 +7,8 @@ typedef enum {
     TOKEN_PLUS,
     TOKEN_MINUS,
     TOKEN_MULT,
-    TOKEN_PARENTHESIS,
+    TOKEN_OPARENTHESIS,
+    TOKEN_CPARENTHESIS,
 } TokenType;
 
 typedef struct Token {
