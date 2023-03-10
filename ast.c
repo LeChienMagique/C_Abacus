@@ -233,6 +233,8 @@ ASTNode* ast_next_term(Token** tokens) {
         if (ast_is_operator(term->children)) {
             // term->children replace with last operator
             if (get_operator_precedence(term->children) < get_operator_precedence(optor)) {
+                print_node(optor);
+                printf("\n");
                 ASTNode* before_last_operand = term->children->children;
                 for (unsigned int i = 0; i < (get_operator_arity(term->children) - 2); i++) {
                     before_last_operand = before_last_operand->next;
@@ -240,7 +242,6 @@ ASTNode* ast_next_term(Token** tokens) {
                 optor->children = before_last_operand->next;
                 before_last_operand->next = NULL;
                 append_child(term->children, optor);
-                // append_child(term, );
             }
             else {
                 optor->children = term->children;
@@ -308,7 +309,7 @@ ASTNode* ast_next_expr(Token** tokens) {
 
         optor = ast_next_operator(tokens);
     }
-    return expr->children;
+    return expr;
 }
 
 ASTNode* build_AST(Token** tokens) {
