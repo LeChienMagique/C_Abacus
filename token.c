@@ -12,6 +12,9 @@ void print_type(int token_type) {
         case TOKEN_INT: {
             printf("TokenInt");
         } break;
+        case TOKEN_FLOAT: {
+            printf("TokenFloat");
+        } break;
         case TOKEN_PLUS: {
             printf("TokenPlus");
         } break;
@@ -66,15 +69,24 @@ Token* create_token(TokenType type, const char* start, size_t length) {
     return token;
 }
 
-Token* token_next_int(const char* input, size_t* index) {
+Token* token_next_number(const char* input, size_t* index) {
     char c = input[*index];
     size_t start = *index;
     while (c != '\0' && is_digit(c)) {
-        (*index)++;
-        c = input[*index];
+        c = input[++(*index)];
     }
+
+    bool is_float = false;
+    if (c != '\0' && c == '.') {
+        is_float = true;
+        c = input[++(*index)];
+        while (c != '\0' && is_digit(c)) {
+            c = input[++(*index)];
+        }
+    }
+
     size_t end = *index;
-    return create_token(TOKEN_INT, input + start, end - start);
+    return create_token(is_float ? TOKEN_FLOAT : TOKEN_INT, input + start, end - start);
 }
 
 Token* token_next_operator(const char* input, size_t* index) {
@@ -108,7 +120,7 @@ Token* next_token(const char* input, size_t* index) {
         if (c == ' ') {
             (*index)++;
         } else if (is_digit(c)) {
-            return token_next_int(input, index);
+            return token_next_number(input, index);
         } else if (is_operator(c)) {
             return token_next_operator(input, index);
         } else if (c == '(') {

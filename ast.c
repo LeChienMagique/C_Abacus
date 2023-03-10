@@ -114,11 +114,18 @@ ASTNode* ast_next_number(Token** tokens) {
             *value = atoi(number->token->value);
             number->value = (void*) value;
         } break;
+        case TOKEN_FLOAT: {
+            number->type = NODE_FLOAT;
+            double* value = malloc(sizeof(float));
+            *value = atof(number->token->value);
+            number->value = (void*) value;
+        } break;
         default: {
             free(number);
             return NULL;
         }
     }
+
     *tokens = (*tokens)->next;
     return number;
 }
@@ -260,7 +267,7 @@ ASTNode* ast_next_term(Token** tokens) {
 
         optor = ast_next_operator(tokens);
     }
-    return term->children;
+    return term;
 }
 
 ASTNode* ast_next_expr(Token** tokens) {
@@ -327,7 +334,7 @@ ASTNode* build_AST(Token** tokens) {
     return ast;
 }
 
-int interpret_ast(ASTNode* node) {
+double interpret_ast(ASTNode* node) {
     switch (node->type) {
         case NODE_UPLUS:
         case NODE_EXPR:
@@ -350,7 +357,10 @@ int interpret_ast(ASTNode* node) {
             return interpret_ast(node->children) / interpret_ast(node->children->next);
         }
         case NODE_INT: {
-            return *((int*)node->value);
+            return (double) *((int*)node->value);
+        }
+        case NODE_FLOAT: {
+            return *((double*)node->value);
         }
         default: {
             printf("unimplemented node: ");
@@ -365,6 +375,9 @@ void print_node(ASTNode* node) {
     switch (node->type) {
         case NODE_INT: {
             printf("NodeInt(%d)", *((int*) node->value));
+        } break;
+        case NODE_FLOAT: {
+            printf("NodeFloat(%f)", *((double*) node->value));
         } break;
         case NODE_PLUS: {
             printf("NodePlus");

@@ -42,6 +42,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_INT: {
             fprintf(f, "[label=\"%d\"]\n", *((int*) node->value));
         } break;
+        case NODE_FLOAT: {
+            fprintf(f, "[label=\"%f\"]\n", *((double*) node->value));
+        } break;
         case NODE_MULT: {
             fprintf(f, "[label=\"*\"]\n");
         } break;
@@ -125,8 +128,8 @@ void run(char* input) {
         printf("\n\n");
     }
 
-    int result = interpret_ast(ast);
-    printf("%s = %d\n", input, result);
+    double result = interpret_ast(ast);
+    printf("%s = %f\n", input, result);
 
     if (GENERATE_GRAPH) {
         generate_dot(ast);
@@ -135,8 +138,9 @@ void run(char* input) {
 
 
 int main(int argc, char** argv) {
-    // TODO: float
+    // TODO: properly implement float and int using a Result struct ?
     // TODO: functions (sqrt, ...)
+    // TODO: free ast (lul)
     // TODO: use automaton to tokenize
     /*
     Usage:
@@ -147,6 +151,7 @@ int main(int argc, char** argv) {
     --graph  Generate AST graph
     --debug  Prints debug information
     */
+
     if (argc >= 2) {
         // test
         if (strcmp(argv[1], "test") == 0) {

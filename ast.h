@@ -5,6 +5,7 @@
 
 typedef enum {
     NODE_INT,
+    NODE_FLOAT,
     NODE_PLUS,
     NODE_UPLUS,
     NODE_MINUS,
@@ -51,5 +52,5 @@ void print_node(ASTNode* node);
 void print_AST(ASTNode* root);
 
 ASTNode* build_AST(Token** tokens);
-int interpret_ast(ASTNode* node);
+double interpret_ast(ASTNode* node);
 #endif // AST_H
