@@ -31,6 +31,9 @@ void print_node(ASTNode* node) {
         case NODE_MULT: {
             printf("NodeMult");
         } break;
+        case NODE_DIV: {
+            printf("NodeDiv");
+        } break;
         default: {
             printf("UnknownNode");
         }
@@ -222,6 +225,10 @@ ASTNode* ast_next_operator(Token** tokens) {
             optor->type = NODE_MULT;
             optor->value = "*";
         } break;
+        case TOKEN_DIV: {
+            optor->type = NODE_DIV;
+            optor->value = "/";
+        } break;
         default: {
             free(optor);
             return NULL;
@@ -388,6 +395,9 @@ int interpret_ast(ASTNode* node) {
         }
         case NODE_MULT: {
             return interpret_ast(node->children) * interpret_ast(node->children->next);
+        }
+        case NODE_DIV: {
+            return interpret_ast(node->children) / interpret_ast(node->children->next);
         }
         case NODE_INT: {
             return *((int*)node->value);

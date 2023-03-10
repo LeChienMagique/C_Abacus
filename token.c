@@ -27,6 +27,9 @@ void print_type(int token_type) {
         case TOKEN_MULT: {
             printf("TokenMult");
         } break;
+        case TOKEN_DIV: {
+            printf("TokenDiv");
+        } break;
         default: {
             printf("UnknownToken");
         }
@@ -86,6 +89,10 @@ Token* token_next_operator(char* input, size_t* index) {
         case '*': {
             token->type = TOKEN_MULT;
             token->value = "*";
+        } break;
+        case '/': {
+            token->type = TOKEN_DIV;
+            token->value = "/";
         } break;
         default: {
             printf("[ERROR] %c operator not implemented\n", c);

@@ -39,7 +39,6 @@ void save_test(const char* filepath, const char* filename, const char* dirpath) 
         err(1, "Could not open file %s: ", results_path);
     }
 
-
     char* input;
     ssize_t nread;
     size_t n = 0;
