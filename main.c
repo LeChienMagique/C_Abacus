@@ -8,7 +8,9 @@
 #include "./token.h"
 #include "./ast.h"
 #include "./test.h"
-void generate_dot(ASTNode* ast);
+
+int GENERATE_GRAPH = 0;
+int DEBUG_MODE = 0;
 
 int evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
@@ -24,41 +26,14 @@ int evaluate_input(char* input) {
     return result;
 }
 
-void run_default(char* input) {
-    if (input == NULL) {
-        input = "14 * (-2) + 3";
-    }
-
-    Token* tokens = calloc(1, sizeof(Token));
-    Token* sentinel = tokens;
-    size_t index = 0;
-    while (input[index] != '\0') {
-        tokens->next = next_token(input, &index);
-        tokens = tokens->next;
-    }
-
-    for (Token* token = sentinel->next; token; token = token->next) {
-        print_token(token);
-        printf("\n");
-    }
-
-    printf("\n");
-
-    ASTNode* ast = build_AST(&(sentinel->next));
-    print_AST(ast);
-    printf("\n\n");
-
-    int result = interpret_ast(ast);
-    printf("%s = %d\n", input, result);
-
-    generate_dot(ast);
-}
-
 void print_usage() {
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  ./main <optional: input> : run input or default\n");
+    fprintf(stderr, "  ./main <input> [options] : run input\n");
     fprintf(stderr, "  ./main test run : run tests\n");
     fprintf(stderr, "  ./main test save : save expected results\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  --debug               Print debug informations\n");
+    fprintf(stderr, "  --graph               Generate AST graph\n");
     exit(1);
 }
 
@@ -123,32 +98,92 @@ void generate_dot(ASTNode* ast) {
     system("dot -Tsvg graph.dot > graph.svg");
 }
 
+void run(char* input) {
+    if (input == NULL) {
+        input = "14 * (-2) + 3";
+    }
+
+    Token* tokens = calloc(1, sizeof(Token));
+    Token* sentinel = tokens;
+    size_t index = 0;
+    while (input[index] != '\0') {
+        tokens->next = next_token(input, &index);
+        tokens = tokens->next;
+    }
+
+    if (DEBUG_MODE) {
+        for (Token* token = sentinel->next; token; token = token->next) {
+            print_token(token);
+            printf("\n");
+        }
+        printf("\n");
+    }
+
+    ASTNode* ast = build_AST(&(sentinel->next));
+    if (DEBUG_MODE) {
+        print_AST(ast);
+        printf("\n\n");
+    }
+
+    int result = interpret_ast(ast);
+    printf("%s = %d\n", input, result);
+
+    if (GENERATE_GRAPH) {
+        generate_dot(ast);
+    }
+}
+
+
 int main(int argc, char** argv) {
-    // TOOD: refactor code
     // TODO: float
     // TODO: functions (sqrt, ...)
     // TODO: use automaton to tokenize
-
-    if (argc == 1) {
-        run_default(NULL);
-    }
-    else if (argc == 2) {
-        run_default(argv[1]);
-    } else if (argc == 3) {
-        if (strcmp(argv[1], "test") != 0) {
-            fprintf(stderr, "Unknown argument: %s\n", argv[1]);
-            print_usage();
+    /*
+    Usage:
+    ./main <input> [options]: run input
+    ./main test run : run tests
+    ./main test save : save expected results
+    Options:
+    --graph  Generate AST graph
+    --debug  Prints debug information
+    */
+    if (argc >= 2) {
+        // test
+        if (strcmp(argv[1], "test") == 0) {
+            if (argc != 3) {
+                fprintf(stderr, "Wrong number of arguments\n");
+                print_usage();
+            }
+            if (strcmp(argv[1], "test") != 0) {
+                fprintf(stderr, "Unknown argument: %s\n", argv[1]);
+                print_usage();
+            }
+            if (strcmp(argv[2], "run") == 0) {
+                tests_run();
+            } else if (strcmp(argv[2], "save") == 0) {
+                tests_save();
+            } else {
+                fprintf(stderr, "Unknown argument: %s\n", argv[2]);
+                print_usage();
+            }
         }
-        if (strcmp(argv[2], "run") == 0) {
-            tests_run();
-        } else if (strcmp(argv[2], "save") == 0) {
-            tests_save();
-        } else {
-            fprintf(stderr, "Unknown argument: %s\n", argv[2]);
-            print_usage();
+        // run user input
+        else {
+            char* input = argv[1];
+            for (int i = 2; i < argc; i++) {
+                if (strcmp(argv[i], "--debug") == 0) {
+                    DEBUG_MODE = 1;
+                } else if (strcmp(argv[i], "--graph") == 0) {
+                    GENERATE_GRAPH = 1;
+                } else {
+                    fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+                    print_usage();
+                }
+            }
+            run(input);
         }
     } else {
-        fprintf(stderr, "Wrong number of arguments\n");
+        fprintf(stderr, "Not enough arguments\n");
         print_usage();
     }
 
