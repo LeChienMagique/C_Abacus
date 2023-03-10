@@ -19,6 +19,6 @@ typedef struct Token {
 } Token;
 
 void print_token(Token* token);
-Token* next_token(char* input, size_t* index);
+Token* next_token(const char* input, size_t* index);
 
 #endif // TOKEN_H

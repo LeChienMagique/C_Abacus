@@ -26,7 +26,7 @@ int evaluate_input(char* input) {
 
 void run_default(char* input) {
     if (input == NULL) {
-        input = "6 - 3 * 2";
+        input = "14 * (-2) + 3";
     }
 
     Token* tokens = calloc(1, sizeof(Token));
@@ -124,7 +124,7 @@ void generate_dot(ASTNode* ast) {
 }
 
 int main(int argc, char** argv) {
-    // TODO: operator precedence
+    // TOOD: refactor code
     // TODO: float
     // TODO: functions (sqrt, ...)
     // TODO: use automaton to tokenize

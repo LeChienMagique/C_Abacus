@@ -57,7 +57,16 @@ bool is_operator(char c) {
     return c == '+' || c == '-' || c == '*' || c == '/';
 }
 
-Token* token_next_int(char* input, size_t* index) {
+Token* create_token(TokenType type, const char* start, size_t length) {
+    Token* token = calloc(1, sizeof(Token));
+    char* value = malloc(length * sizeof(char));
+    value = memcpy(value, start, length);
+    token->value = value;
+    token->type = type;
+    return token;
+}
+
+Token* token_next_int(const char* input, size_t* index) {
     char c = input[*index];
     size_t start = *index;
     while (c != '\0' && is_digit(c)) {
@@ -65,45 +74,34 @@ Token* token_next_int(char* input, size_t* index) {
         c = input[*index];
     }
     size_t end = *index;
-    char* value = malloc(end - start);
-    value = memcpy(value, input + start, end - start);
-    Token* token = calloc(1, sizeof(Token));
-    token->value = value;
-    token->type = TOKEN_INT;
-
-    return token;
+    return create_token(TOKEN_INT, input + start, end - start);
 }
 
-Token* token_next_operator(char* input, size_t* index) {
+Token* token_next_operator(const char* input, size_t* index) {
     char c = input[*index];
-    Token* token = calloc(1, sizeof(Token));
+    Token* token;
     switch (c) {
         case '+': {
-            token->type = TOKEN_PLUS;
-            token->value = "+";
+            token = create_token(TOKEN_PLUS, input + (*index)++, 1);
         } break;
         case '-': {
-            token->type = TOKEN_MINUS;
-            token->value = "-";
+            token = create_token(TOKEN_MINUS, input + (*index)++, 1);
         } break;
         case '*': {
-            token->type = TOKEN_MULT;
-            token->value = "*";
+            token = create_token(TOKEN_MULT, input + (*index)++, 1);
         } break;
         case '/': {
-            token->type = TOKEN_DIV;
-            token->value = "/";
+            token = create_token(TOKEN_DIV, input + (*index)++, 1);
         } break;
         default: {
             printf("[ERROR] %c operator not implemented\n", c);
             assert(false);
         }
     }
-    (*index)++;
     return token;
 }
 
-Token* next_token(char* input, size_t* index) {
+Token* next_token(const char* input, size_t* index) {
     char c = input[*index];
     while (c != '\0') {
         c = input[*index];
@@ -113,15 +111,13 @@ Token* next_token(char* input, size_t* index) {
             return token_next_int(input, index);
         } else if (is_operator(c)) {
             return token_next_operator(input, index);
-        } else if (c == '(' || c == ')') {
-            Token* token = calloc(1, sizeof(Token));
-            token->type = c == ')' ? TOKEN_CPARENTHESIS : TOKEN_OPARENTHESIS;
-            token->value = c == ')' ? ")" : "(";
-            (*index)++;
-            return token;
+        } else if (c == '(') {
+            return create_token(TOKEN_OPARENTHESIS, input + (*index)++, 1);
+        } else if (c == ')') {
+            return create_token(TOKEN_CPARENTHESIS, input + (*index)++, 1);
         }
         else {
-            printf("[ERROR] not implemented at index %lu\n", *index);
+            printf("[ERROR] unknown character at index %lu\n", *index);
             printf("%s\n", input);
             for (size_t i = 0; i < *index; i++) {
                 printf(" ");

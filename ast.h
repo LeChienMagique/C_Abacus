@@ -38,13 +38,13 @@ typedef struct ASTNode {
     struct ASTNode* next;
 } ASTNode;
 
-ASTNode* ast_next_expr(Token** tokens);
-ASTNode* ast_next_operator(Token** tokens);
-ASTNode* ast_next_term(Token** tokens);
-ASTNode* ast_next_operand(Token** tokens);
-ASTNode* ast_next_number(Token** tokens);
-OpPrecedence get_operator_precedence(ASTNode* optor);
-OpArity get_operator_arity(ASTNode* optor);
+// ASTNode* ast_next_expr(Token** tokens);
+// ASTNode* ast_next_operator(Token** tokens);
+// ASTNode* ast_next_term(Token** tokens);
+// ASTNode* ast_next_operand(Token** tokens);
+// ASTNode* ast_next_number(Token** tokens);
+// OpPrecedence get_operator_precedence(ASTNode* optor);
+// OpArity get_operator_arity(ASTNode* optor);
 
 bool ast_is_operator(ASTNode* node);
 void print_node(ASTNode* node);

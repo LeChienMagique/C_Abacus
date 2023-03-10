@@ -4,62 +4,23 @@
 #include <err.h>
 #include <assert.h>
 #include "./ast.h"
+/*
+program = expr
 
-void print_node(ASTNode* node) {
-    switch (node->type) {
-        case NODE_INT: {
-            printf("NodeInt(%d)", *((int*) node->value));
-        } break;
-        case NODE_PLUS: {
-            printf("NodePlus");
-        } break;
-        case NODE_MINUS: {
-            printf("NodeMinus");
-        } break;
-        case NODE_UPLUS: {
-            printf("NodeUnaryPlus");
-        } break;
-        case NODE_UMINUS: {
-            printf("NodeUnaryMinus");
-        } break;
-        case NODE_EXPR: {
-            printf("NodeExpr");
-        } break;
-        case NODE_TERM: {
-            printf("NodeTerm");
-        } break;
-        case NODE_MULT: {
-            printf("NodeMult");
-        } break;
-        case NODE_DIV: {
-            printf("NodeDiv");
-        } break;
-        default: {
-            printf("UnknownNode");
-        }
-    }
-    if (false && node->token) {
-        printf(", Token: ");
-        print_token(node->token);
-    }
-}
+expr = term {operator term}
 
-void print_AST(ASTNode* root) {
-    // printf("(");
-    print_node(root);
-    // printf(")");
-    if (root->children == NULL) {
-        return;
-    }
-    printf(" -> {");
-    for (ASTNode* child = root->children; child; child = child->next) {
-        print_AST(child);
-        if (child->next) {
-            printf(", ");
-        }
-    }
-    printf("}");
-}
+term = [unary] operand {operator operand}
+
+operand = number
+        | '(' expr ')'
+
+operator = + | - | * | /
+*/
+ASTNode* ast_next_expr(Token** tokens);
+ASTNode* ast_next_operator(Token** tokens);
+ASTNode* ast_next_term(Token** tokens);
+ASTNode* ast_next_operand(Token** tokens);
+ASTNode* ast_next_number(Token** tokens);
 
 
 ASTNode* create_node(Token* token, int type) {
@@ -79,23 +40,6 @@ void append_child(ASTNode* node, ASTNode* child) {
     last_child->next = child;
 }
 
-/*
-program = expr
-
-expr = term {operator term}
-
-term = [unary] operand {operator operand}
-
-operand = number
-        | '(' expr ')'
-
-operator = + | - | * | /
-*/
-ASTNode* ast_next_expr(Token** tokens);
-ASTNode* ast_next_operator(Token** tokens);
-ASTNode* ast_next_term(Token** tokens);
-ASTNode* ast_next_operand(Token** tokens);
-ASTNode* ast_next_number(Token** tokens);
 
 bool ast_is_operator(ASTNode* node) {
     switch (node->type) {
@@ -193,17 +137,22 @@ ASTNode* ast_next_operand(Token** tokens) {
     }
 
     if ((*tokens)->type != TOKEN_OPARENTHESIS) {
-        printf("Expected parenthesis followed by expression but got: ");
+        printf("[ERROR] Expected parenthesis followed by expression but got: ");
         print_token(*tokens);
         printf("\n");
         assert(false);
     }
+    *tokens = (*tokens)->next;
 
     op = ast_next_expr(tokens);
-    if (op) {
-        return op;
+
+    if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
+        printf("[ERROR] Mismatched parenthesis\n");
+        assert(false);
     }
-    assert(false && "unreachable");
+
+    *tokens = (*tokens)->next;
+    return op;
 }
 
 ASTNode* ast_next_operator(Token** tokens) {
@@ -215,44 +164,42 @@ ASTNode* ast_next_operator(Token** tokens) {
     switch ((*tokens)->type) {
         case TOKEN_PLUS: {
             optor->type = NODE_PLUS;
-            optor->value = "+";
         } break;
         case TOKEN_MINUS: {
             optor->type = NODE_MINUS;
-            optor->value = "-";
         } break;
         case TOKEN_MULT: {
             optor->type = NODE_MULT;
-            optor->value = "*";
         } break;
         case TOKEN_DIV: {
             optor->type = NODE_DIV;
-            optor->value = "/";
         } break;
         default: {
             free(optor);
             return NULL;
         }
     }
+    optor->value = (*tokens)->value;
     *tokens = (*tokens)->next;
     return optor;
 }
 
 ASTNode* ast_next_unary(Token** tokens) {
-    ASTNode* node;
+    ASTNode* unary;
     switch ((*tokens)->type) {
         case TOKEN_PLUS: {
-            node = create_node(*tokens, NODE_UPLUS);
+            unary = create_node(*tokens, NODE_UPLUS);
         } break;
         case TOKEN_MINUS: {
-            node = create_node(*tokens, NODE_UMINUS);
+            unary = create_node(*tokens, NODE_UMINUS);
         } break;
         default: {
             return NULL;
         }
     }
+    unary->value = (*tokens)->value;
     *tokens = (*tokens)->next;
-    return node;
+    return unary;
 }
 
 ASTNode* ast_next_term(Token** tokens) {
@@ -287,7 +234,7 @@ ASTNode* ast_next_term(Token** tokens) {
             // term->children replace with last operator
             if (get_operator_precedence(term->children) < get_operator_precedence(optor)) {
                 ASTNode* before_last_operand = term->children->children;
-                for (unsigned int i = 0; i < get_operator_arity(term->children) - get_operator_arity(optor); i++) {
+                for (unsigned int i = 0; i < (get_operator_arity(term->children) - 2); i++) {
                     before_last_operand = before_last_operand->next;
                 }
                 optor->children = before_last_operand->next;
@@ -312,10 +259,8 @@ ASTNode* ast_next_term(Token** tokens) {
 
         optor = ast_next_operator(tokens);
     }
-    return term;
+    return term->children;
 }
-
-
 
 ASTNode* ast_next_expr(Token** tokens) {
     if (*tokens == NULL) {
@@ -325,13 +270,10 @@ ASTNode* ast_next_expr(Token** tokens) {
     // expr = term {operator term}
     ASTNode* expr = create_node(NULL, NODE_EXPR);
 
-
     // term
     ASTNode* term = ast_next_term(tokens);
     if (term == NULL) {
-        printf("Expected term got: ");
-        print_token(*tokens);
-        assert(false);
+        return NULL;
     }
     append_child(expr, term);
 
@@ -342,7 +284,7 @@ ASTNode* ast_next_expr(Token** tokens) {
             // expr->children replace with last operator
             if (get_operator_precedence(expr->children) < get_operator_precedence(optor)) {
                 ASTNode* before_last_operand = expr->children->children;
-                for (unsigned int i = 0; i < get_operator_arity(expr->children) - get_operator_arity(optor); i++) {
+                for (unsigned int i = 0; i < (get_operator_arity(expr->children) - 2); i++) {
                     before_last_operand = before_last_operand->next;
                 }
                 optor->children = before_last_operand->next;
@@ -366,13 +308,20 @@ ASTNode* ast_next_expr(Token** tokens) {
 
         optor = ast_next_operator(tokens);
     }
-    return expr;
+    return expr->children;
 }
 
 ASTNode* build_AST(Token** tokens) {
     ASTNode* ast = ast_next_expr(tokens);
     if (*tokens) {
-        assert(false && "[ERROR] leftover tokens");
+        printf("[ERROR] leftover tokens: ");
+        while (*tokens) {
+            print_token(*tokens);
+            printf(" | ");
+            *tokens = (*tokens)->next;
+        }
+        printf("\n");
+        assert(false);
     }
     return ast;
 }
@@ -409,4 +358,58 @@ int interpret_ast(ASTNode* node) {
             assert(false);
         }
     }
+}
+
+void print_node(ASTNode* node) {
+    switch (node->type) {
+        case NODE_INT: {
+            printf("NodeInt(%d)", *((int*) node->value));
+        } break;
+        case NODE_PLUS: {
+            printf("NodePlus");
+        } break;
+        case NODE_MINUS: {
+            printf("NodeMinus");
+        } break;
+        case NODE_UPLUS: {
+            printf("NodeUnaryPlus");
+        } break;
+        case NODE_UMINUS: {
+            printf("NodeUnaryMinus");
+        } break;
+        case NODE_EXPR: {
+            printf("NodeExpr");
+        } break;
+        case NODE_TERM: {
+            printf("NodeTerm");
+        } break;
+        case NODE_MULT: {
+            printf("NodeMult");
+        } break;
+        case NODE_DIV: {
+            printf("NodeDiv");
+        } break;
+        default: {
+            printf("UnknownNode");
+        }
+    }
+    if (false && node->token) {
+        printf(", Token: ");
+        print_token(node->token);
+    }
+}
+
+void print_AST(ASTNode* root) {
+    print_node(root);
+    if (root->children == NULL) {
+        return;
+    }
+    printf(" -> {");
+    for (ASTNode* child = root->children; child; child = child->next) {
+        print_AST(child);
+        if (child->next) {
+            printf(", ");
+        }
+    }
+    printf("}");
 }
