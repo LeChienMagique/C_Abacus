@@ -143,9 +143,7 @@ void run(char* input) {
 int main(int argc, char** argv) {
     // TODO: write more tests
     // TODO: functions (sqrt, ...)
-    // TODO: free ast (lul)
     // TODO: use automaton to tokenize
-    // TODO: no memory leaks
     /*
     Usage:
     ./main <input> [options]: run input

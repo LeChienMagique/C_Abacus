@@ -12,6 +12,7 @@ This is my first time doing these kind of things with C so the code structure ma
 - Floating point numbers
 
 ### Not implemented:
+- ==
 - Functions (sqrt, facto, max, min, isprime, fibo, gcd)
 - Variables
 - REPL
