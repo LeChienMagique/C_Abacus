@@ -62,8 +62,9 @@ bool is_operator(char c) {
 
 Token* create_token(TokenType type, const char* start, size_t length) {
     Token* token = calloc(1, sizeof(Token));
-    char* value = malloc(length * sizeof(char));
+    char* value = malloc((length + 1) * sizeof(char));
     value = memcpy(value, start, length);
+    value[length] = '\0';
     token->value = value;
     token->type = type;
     return token;
@@ -116,7 +117,6 @@ Token* token_next_operator(const char* input, size_t* index) {
 Token* next_token(const char* input, size_t* index) {
     char c = input[*index];
     while (c != '\0') {
-        c = input[*index];
         if (c == ' ') {
             (*index)++;
         } else if (is_digit(c)) {
@@ -129,7 +129,7 @@ Token* next_token(const char* input, size_t* index) {
             return create_token(TOKEN_CPARENTHESIS, input + (*index)++, 1);
         }
         else {
-            printf("[ERROR] unknown character at index %lu\n", *index);
+            printf("[ERROR] unknown token starting with char: %d at index %lu\n", (int) input[*index], *index);
             printf("%s\n", input);
             for (size_t i = 0; i < *index; i++) {
                 printf(" ");
@@ -137,6 +137,7 @@ Token* next_token(const char* input, size_t* index) {
             printf("^\n");
             assert(false);
         }
+        c = input[*index];
 
     }
     return NULL;

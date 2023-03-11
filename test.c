@@ -8,6 +8,9 @@
 #include "./ast.h"
 #include "./token.h"
 
+#define SV_IMPLEMENTATION
+#include "./sv.h"
+
 static ASTNode* evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
@@ -21,12 +24,31 @@ static ASTNode* evaluate_input(char* input) {
     return interpret_ast(ast);
 }
 
-void save_test(const char* filepath, const char* filename, const char* dirpath) {
-    FILE* infile = fopen(filepath, "r");
-    if (infile == NULL) {
+char* read_file(const char* filepath) {
+    FILE* f = fopen(filepath, "r");
+    if (f == NULL) {
         err(1, "Could not open file %s: ", filepath);
     }
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    rewind(f);
 
+    char* content = malloc(fsize + 1);
+    fread(content, fsize, 1, f);
+    fclose(f);
+    content[fsize] = '\0';
+    return content;
+}
+
+String_View next_input(String_View* inputs) {
+    String_View line = sv_chop_by_delim(inputs, '\n');
+    String_View input = sv_trim(sv_chop_by_delim(&line, '#'));
+
+    return input;
+}
+
+
+void save_test(const char* filepath, const char* filename, const char* dirpath) {
     char results_path[strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output")];
     results_path[0] = '\0';
     strcat(results_path, dirpath);
@@ -34,62 +56,60 @@ void save_test(const char* filepath, const char* filename, const char* dirpath) 
     strcat(results_path, filename);
     strcat(results_path, "_output");
     FILE* results = fopen(results_path, "w+");
-    if (results == NULL) {
-        err(1, "Could not open file %s: ", results_path);
-    }
 
-    char* input;
-    ssize_t nread;
-    size_t n = 0;
-    while ((nread = getline(&input, &n, infile)) != -1) {
-        if (input[nread - 1] == '\n') {
-            input[nread - 1] = '\0';
+    char* inputs = read_file(filepath);
+    String_View sv_inputs = sv_from_cstr(inputs);
+
+    String_View sv_input;
+    while (sv_inputs.count > 0) {
+        sv_input = next_input(&sv_inputs);
+        if (sv_input.count == 0) {
+            continue;
         }
+
+        char input[sv_input.count + 1];
+        sprintf(input, SV_Fmt, SV_Arg(sv_input));
+
         ASTNode* result = evaluate_input(input);
         if (result->type == NODE_INT) {
-            fprintf(results, "%s = %d\n", input, *(int*) result->value);
-            fprintf(stdout, "%s = %d\n", input, *(int*) result->value);
+            fprintf(results, "%d\n", *(int*) result->value);
+            printf("%s = %d\n", input, *(int*) result->value);
         } else {
-            fprintf(results, "%s = %f\n", input, *(double*) result->value);
-            fprintf(stdout, "%s = %f\n", input, *(double*) result->value);
+            fprintf(results, "%f\n", *(double*) result->value);
+            printf("%s = %f\n", input, *(double*) result->value);
         }
     }
+    free(inputs);
 }
 
 
 void run_test(const char* filepath, const char* filename, const char* dirpath) {
-    FILE* infile = fopen(filepath, "r");
-    if (infile == NULL) {
-        err(1, "Could not open file %s: ", filepath);
-    }
-
     char results_path[strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output")];
     results_path[0] = '\0';
     strcat(results_path, dirpath);
     strcat(results_path, "output/");
     strcat(results_path, filename);
     strcat(results_path, "_output");
-    FILE* results = fopen(results_path, "r");
-    if (results == NULL) {
-        err(1, "Could not open file %s: ", results_path);
-    }
 
-    char* input;
-    char* expected;
-    ssize_t nread;
-    size_t n = 0;
-    while ((nread = getline(&input, &n, infile)) != -1) {
-        if (input[nread - 1] == '\n') {
-            input[nread - 1] = '\0';
+    char* inputs = read_file(filepath);
+    String_View sv_inputs = sv_from_cstr(inputs);
+
+    char* results = read_file(results_path);
+    String_View sv_outputs = sv_from_cstr(results);
+
+    String_View sv_input;
+    String_View sv_expected;
+    while (sv_inputs.count > 0 && sv_outputs.count > 0) {
+        sv_input = next_input(&sv_inputs);
+        if (sv_input.count == 0) {
+            continue;
         }
+        sv_expected = sv_chop_by_delim(&sv_outputs, '\n');
+
+        char input[sv_input.count + 1];
+        sprintf(input, SV_Fmt, SV_Arg(sv_input));
+
         ASTNode* result = evaluate_input(input);
-
-        n = 0;
-        nread = getline(&expected, &n, results);
-        if (nread == -1) {
-            errx(1, "Different number of tests and results for test: %s", filepath);
-        }
-
         char str_result[512]; // should be enough for everyone
         if (result->type == NODE_INT) {
             sprintf(str_result, "%d", *(int*) result->value);
@@ -97,15 +117,20 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
             sprintf(str_result, "%f", *(double*) result->value);
         }
 
-        if (expected[nread - 1] == '\n') {
-            expected[nread - 1] = '\0';
-        }
-        if (strcmp(str_result, expected) != 0) {
-            printf("[ERROR] '%s' got '%s' expected '%s'\n", input, str_result, expected);
+        char str_expected[sv_expected.count + 1];
+        sprintf(str_expected, SV_Fmt, SV_Arg(sv_expected));
+        if (strcmp(str_result, str_expected)) {
+            printf("[ERROR] '%s' got '%s' expected '%s'\n", input, str_result, str_expected);
         } else {
             printf("[PASSED] %s = %s\n", input, str_result);
         }
     }
+    free(inputs);
+
+    if (sv_inputs.count > 0 || sv_outputs.count > 0) {
+        printf("[ERROR] Different number of tests and results\n");
+    }
+
 }
 
 

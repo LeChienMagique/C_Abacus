@@ -127,8 +127,8 @@ void run(char* input) {
     }
 }
 
-
 int main(int argc, char** argv) {
+    // TODO: write mode tests
     // TODO: functions (sqrt, ...)
     // TODO: free ast (lul)
     // TODO: use automaton to tokenize
