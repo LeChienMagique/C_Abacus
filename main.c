@@ -45,6 +45,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_EXP: {
             fprintf(f, "[label=\"^\"]\n");
         } break;
+        case NODE_MOD: {
+            fprintf(f, "[label=\"%%\"]\n");
+        } break;
         case NODE_MINUS:
         case NODE_UMINUS: {
             fprintf(f, "[label=\"-\"]\n");

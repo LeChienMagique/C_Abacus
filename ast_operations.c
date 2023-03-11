@@ -91,14 +91,19 @@ Result ast_mul(Result a, Result b) {
 
 Result ast_div(Result a, Result b) {
     Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT) {
-        if (b.type == RESULT_FLOAT) {
+    if (b.type == RESULT_FLOAT) {
+        if (b.valf == 0) {
+            errx(EXIT_FAILURE, "Division by zero");
+        }
+        if (a.type == RESULT_FLOAT) {
             result.valf = a.valf / b.valf;
         } else {
-            result.valf = a.valf / ((double) b.vali);
+            result.valf = ((double) a.vali) / b.valf;
         }
-    } else if (b.type == RESULT_FLOAT) {
-        result.valf = ((double) a.vali) / b.valf;
+    } else if (b.vali == 0) {
+        errx(EXIT_FAILURE, "Division by zero");
+    } else if (a.type == RESULT_FLOAT) {
+        result.valf = a.valf / ((double) b.vali);
     } else {
         result.vali = a.vali / b.vali;
     }
@@ -107,6 +112,7 @@ Result ast_div(Result a, Result b) {
 }
 
 Result ast_exp(Result a, Result b) {
+    // TODO: check for a = 0 and b < 0
     Result result = create_result(a, b);
     if (a.type == RESULT_FLOAT) {
         if (b.type == RESULT_FLOAT) {
@@ -123,16 +129,29 @@ Result ast_exp(Result a, Result b) {
     return result;
 }
 
-void ast_neg(ASTNode* node) {
-    if (node->type == NODE_INT) {
-        int value = *(int*) node->value;
-        value *= -1;
-        node->value = (void*) &value;
-    } else if (node->type == NODE_FLOAT) {
-        double value = *(double*) node->value;
-        value *= -1;
-        node->value = (void*) &value;
+Result ast_mod(Result a, Result b) {
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = fmod(a.valf, b.valf);
+        } else {
+            result.valf = fmod(a.valf, (double) b.vali);
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = fmod((double) a.vali, b.valf);
     } else {
-        errx(1, "unreachable");
+        result.vali = (int) fmod(a.vali, b.vali);
     }
+    check_zero_result(&result);
+    return result;
+}
+
+
+
+Result ast_neg(Result x) {
+    return (Result) {
+        .type = x.type,
+        .vali = -(x.vali),
+        .valf = -(x.valf)
+    };
 }

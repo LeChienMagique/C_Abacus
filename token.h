@@ -10,6 +10,7 @@ typedef enum {
     TOKEN_MULT,
     TOKEN_DIV,
     TOKEN_EXP,
+    TOKEN_MOD,
     TOKEN_OPARENTHESIS,
     TOKEN_CPARENTHESIS,
 } TokenType;

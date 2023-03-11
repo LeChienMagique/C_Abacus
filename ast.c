@@ -57,6 +57,8 @@ bool ast_is_operator(ASTNode* node) {
         case NODE_MINUS:
         case NODE_PLUS:
         case NODE_DIV:
+        case NODE_EXP:
+        case NODE_MOD:
         case NODE_MULT: {
             return true;
         }
@@ -80,6 +82,12 @@ OpArity get_operator_arity(ASTNode* optor) {
         case NODE_DIV: {
             return AR_DIV;
         }
+        case NODE_EXP: {
+            return AR_EXP;
+        }
+        case NODE_MOD: {
+            return AR_MOD;
+        }
         default: {
             printf("[ERROR] operator arity not implemented for: ");
             print_node(optor);
@@ -102,6 +110,12 @@ OpPrecedence get_operator_precedence(ASTNode* optor) {
         }
         case NODE_DIV: {
             return OP_DIV;
+        }
+        case NODE_MOD: {
+            return OP_MOD;
+        }
+        case NODE_EXP: {
+            return OP_EXP;
         }
         default: {
             printf("[ERROR] operator precedence not implemented for: ");
@@ -195,13 +209,16 @@ ASTNode* ast_next_operator(Token** tokens) {
         case TOKEN_EXP: {
             optor->type = NODE_EXP;
         } break;
+        case TOKEN_MOD: {
+            optor->type = NODE_MOD;
+        } break;
         default: {
             free(optor);
             return NULL;
         }
     }
     size_t token_len = strlen((char*) (*tokens)->value);
-    void* value = malloc(token_len + 1);
+    void* value = calloc(token_len + 1, sizeof(char));
     memcpy(value, (*tokens)->value, token_len);
     optor->value = value;
     advance_tokens(tokens);
@@ -222,7 +239,7 @@ ASTNode* ast_next_unary(Token** tokens) {
         }
     }
     size_t token_len = strlen((char*) (*tokens)->value);
-    void* value = malloc(token_len + 1);
+    void* value = calloc(token_len + 1, sizeof(char));
     memcpy(value, (*tokens)->value, token_len);
     unary->value = value;
     advance_tokens(tokens);
@@ -361,8 +378,7 @@ Result interpret_ast(ASTNode* node) {
             return interpret_ast(node->children);
         }
         case NODE_UMINUS: {
-            ast_neg(node->children);
-            return create_result_from_node(node->children);
+            return ast_neg(interpret_ast(node->children));
         }
         case NODE_PLUS: {
             Result a = interpret_ast(node->children);
@@ -392,6 +408,12 @@ Result interpret_ast(ASTNode* node) {
             Result a = interpret_ast(node->children);
             Result b = interpret_ast(node->children->next);
             Result result = ast_exp(a, b);
+            return result;
+        }
+        case NODE_MOD: {
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_mod(a, b);
             return result;
         }
         case NODE_FLOAT:
@@ -454,6 +476,12 @@ void print_node(ASTNode* node) {
         } break;
         case NODE_DIV: {
             printf("NodeDiv");
+        } break;
+        case NODE_EXP: {
+            printf("NodeExponent");
+        } break;
+        case NODE_MOD: {
+            printf("NodeModulus");
         } break;
         default: {
             printf("UnknownNode");

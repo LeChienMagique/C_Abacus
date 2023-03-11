@@ -6,13 +6,17 @@
 typedef enum {
     NODE_INT,
     NODE_FLOAT,
-    NODE_PLUS,
+    // unary operators
     NODE_UPLUS,
-    NODE_MINUS,
     NODE_UMINUS,
+    // binary operators
+    NODE_PLUS,
+    NODE_MINUS,
     NODE_DIV,
     NODE_MULT,
     NODE_EXP,
+    NODE_MOD,
+    // nodes
     NODE_EXPR,
     NODE_TERM,
 } NodeType;
@@ -22,6 +26,8 @@ typedef enum {
     OP_MINUS = 11,
     OP_DIV = 12,
     OP_MULT = 12,
+    OP_MOD = 12,
+    OP_EXP = 13,
 } OpPrecedence;
 
 typedef enum {
@@ -29,6 +35,8 @@ typedef enum {
     AR_MINUS = 2,
     AR_DIV = 2,
     AR_MULT = 2,
+    AR_EXP = 2,
+    AR_MOD = 2,
 } OpArity;
 
 
