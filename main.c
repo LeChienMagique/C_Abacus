@@ -42,6 +42,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_DIV: {
             fprintf(f, "[label=\"/\"]\n");
         } break;
+        case NODE_EXP: {
+            fprintf(f, "[label=\"^\"]\n");
+        } break;
         case NODE_MINUS:
         case NODE_UMINUS: {
             fprintf(f, "[label=\"-\"]\n");
@@ -118,7 +121,8 @@ Result evaluate_input(char* input) {
     Result result = interpret_ast(ast);
 
     free_AST(ast);
-    free_tokens(sentinel);
+    // tokens are actually freed during ast build
+    free(sentinel);
     return result;
 }
 
@@ -148,7 +152,6 @@ int main(int argc, char** argv) {
     --graph  Generate AST graph
     --debug  Prints debug information
     */
-
     if (argc >= 2) {
         // test
         if (strcmp(argv[1], "test") == 0) {
@@ -169,6 +172,7 @@ int main(int argc, char** argv) {
                 print_usage();
             }
         }
+
         // run user input
         else {
             char* input = argv[1];

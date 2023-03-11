@@ -33,6 +33,9 @@ void print_type(int token_type) {
         case TOKEN_DIV: {
             printf("TokenDiv");
         } break;
+        case TOKEN_EXP: {
+            printf("TokenExponent");
+        } break;
         default: {
             printf("UnknownToken");
         }
@@ -56,8 +59,15 @@ bool is_alpha(char c) {
     return is_digit(c) || is_letter(c);
 }
 
+#define OPERATORS_COUNT 5
+const char operators[OPERATORS_COUNT] = {'+', '-', '*', '/', '^'};
 bool is_operator(char c) {
-    return c == '+' || c == '-' || c == '*' || c == '/';
+    for (size_t i = 0; i < OPERATORS_COUNT; i++) {
+        if (c == operators[i]) {
+            return true;
+        }
+    }
+    return false;
 }
 
 Token* create_token(TokenType type, const char* start, size_t length) {
@@ -105,6 +115,9 @@ Token* token_next_operator(const char* input, size_t* index) {
         } break;
         case '/': {
             token = create_token(TOKEN_DIV, input + (*index)++, 1);
+        } break;
+        case '^': {
+            token = create_token(TOKEN_EXP, input + (*index)++, 1);
         } break;
         default: {
             printf("[ERROR] %c operator not implemented\n", c);

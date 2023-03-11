@@ -192,6 +192,9 @@ ASTNode* ast_next_operator(Token** tokens) {
         case TOKEN_DIV: {
             optor->type = NODE_DIV;
         } break;
+        case TOKEN_EXP: {
+            optor->type = NODE_EXP;
+        } break;
         default: {
             free(optor);
             return NULL;
@@ -335,6 +338,7 @@ ASTNode* ast_next_expr(Token** tokens) {
 }
 
 ASTNode* build_AST(Token** tokens) {
+    // note that tokens will be freed during this process
     ASTNode* ast = ast_next_expr(tokens);
     if (*tokens) {
         printf("[ERROR] leftover tokens: ");
@@ -382,6 +386,12 @@ Result interpret_ast(ASTNode* node) {
             Result a = interpret_ast(node->children);
             Result b = interpret_ast(node->children->next);
             Result result = ast_div(a, b);
+            return result;
+        }
+        case NODE_EXP: {
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_exp(a, b);
             return result;
         }
         case NODE_FLOAT:

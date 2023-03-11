@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <math.h>
 
 Result create_result(Result a, Result b) {
     Result result = {0};
@@ -29,51 +30,96 @@ Result create_result_from_node(ASTNode* node) {
     return result;
 }
 
+void check_zero_result(Result* result) {
+    if (result->type == RESULT_FLOAT && result->valf == 0) {
+        result->type = RESULT_INT;
+        result->vali = 0;
+    }
+}
+
 Result ast_add(Result a, Result b) {
-    Result result = {0};
-    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
-        // at least one float
-        result.valf = a.valf + b.valf;
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = a.valf + b.valf;
+        } else {
+            result.valf = a.valf + ((double) b.vali);
+        }
+        result.type = RESULT_FLOAT;
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = ((double) a.vali) + b.valf;
     } else {
-        // both int
         result.vali = a.vali + b.vali;
     }
+    check_zero_result(&result);
     return result;
 }
 
 Result ast_sub(Result a, Result b) {
     Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
-        // at least one float
-        result.valf = a.valf - b.valf;
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = a.valf - b.valf;
+        } else {
+            result.valf = a.valf - ((double) b.vali);
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = ((double) a.vali) - b.valf;
     } else {
-        // both int
         result.vali = a.vali - b.vali;
     }
+    check_zero_result(&result);
     return result;
 }
 
 Result ast_mul(Result a, Result b) {
     Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
-        // at least one float
-        result.valf = a.valf * b.valf;
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = a.valf * b.valf;
+        } else {
+            result.valf = a.valf * ((double) b.vali);
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = ((double) a.vali) * b.valf;
     } else {
-        // both int
         result.vali = a.vali * b.vali;
     }
+    check_zero_result(&result);
     return result;
 }
 
 Result ast_div(Result a, Result b) {
     Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
-        // at least one float
-        result.valf = a.valf / b.valf;
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = a.valf / b.valf;
+        } else {
+            result.valf = a.valf / ((double) b.vali);
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = ((double) a.vali) / b.valf;
     } else {
-        // both int
         result.vali = a.vali / b.vali;
     }
+    check_zero_result(&result);
+    return result;
+}
+
+Result ast_exp(Result a, Result b) {
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = pow(a.valf, b.valf);
+        } else {
+            result.valf = pow(a.valf, (double) b.vali);
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = pow((double) a.vali, b.valf);
+    } else {
+        result.vali = (int) pow(a.vali, b.vali);
+    }
+    check_zero_result(&result);
     return result;
 }
 

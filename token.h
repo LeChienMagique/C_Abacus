@@ -9,6 +9,7 @@ typedef enum {
     TOKEN_MINUS,
     TOKEN_MULT,
     TOKEN_DIV,
+    TOKEN_EXP,
     TOKEN_OPARENTHESIS,
     TOKEN_CPARENTHESIS,
 } TokenType;

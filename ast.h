@@ -12,6 +12,7 @@ typedef enum {
     NODE_UMINUS,
     NODE_DIV,
     NODE_MULT,
+    NODE_EXP,
     NODE_EXPR,
     NODE_TERM,
 } NodeType;
