@@ -142,3 +142,16 @@ Token* next_token(const char* input, size_t* index) {
     }
     return NULL;
 }
+
+void free_tokens(Token* tokens) {
+    if (tokens->next) {
+        free_tokens(tokens->next);
+    }
+    printf("free: ");
+    print_token(tokens);
+    printf("\n");
+    if (tokens->value) {
+        free(tokens->value);
+    }
+    free(tokens);
+}

@@ -23,6 +23,15 @@ ASTNode* ast_next_term(Token** tokens);
 ASTNode* ast_next_operand(Token** tokens);
 ASTNode* ast_next_number(Token** tokens);
 
+void advance_tokens(Token** tokens) {
+    Token* next = (*tokens)->next;
+    if ((*tokens)->value) {
+        free((*tokens)->value);
+    }
+    free(*tokens);
+    *tokens = next;
+}
+
 
 ASTNode* create_node(Token* token, int type) {
     ASTNode* node = calloc(1, sizeof(ASTNode));
@@ -127,7 +136,7 @@ ASTNode* ast_next_number(Token** tokens) {
         }
     }
 
-    *tokens = (*tokens)->next;
+    advance_tokens(tokens);
     return number;
 }
 
@@ -150,7 +159,7 @@ ASTNode* ast_next_operand(Token** tokens) {
         printf("\n");
         assert(false);
     }
-    *tokens = (*tokens)->next;
+    advance_tokens(tokens);
 
     op = ast_next_expr(tokens);
 
@@ -159,7 +168,7 @@ ASTNode* ast_next_operand(Token** tokens) {
         assert(false);
     }
 
-    *tokens = (*tokens)->next;
+    advance_tokens(tokens);
     return op;
 }
 
@@ -188,7 +197,7 @@ ASTNode* ast_next_operator(Token** tokens) {
         }
     }
     optor->value = (*tokens)->value;
-    *tokens = (*tokens)->next;
+    advance_tokens(tokens);
     return optor;
 }
 
@@ -206,7 +215,7 @@ ASTNode* ast_next_unary(Token** tokens) {
         }
     }
     unary->value = (*tokens)->value;
-    *tokens = (*tokens)->next;
+    advance_tokens(tokens);
     return unary;
 }
 
@@ -325,7 +334,7 @@ ASTNode* build_AST(Token** tokens) {
         while (*tokens) {
             print_token(*tokens);
             printf(" | ");
-            *tokens = (*tokens)->next;
+            advance_tokens(tokens);
         }
         printf("\n");
         assert(false);
@@ -333,7 +342,7 @@ ASTNode* build_AST(Token** tokens) {
     return ast;
 }
 
-ASTNode* interpret_ast(ASTNode* node) {
+Result interpret_ast(ASTNode* node) {
     switch (node->type) {
         case NODE_UPLUS:
         case NODE_EXPR:
@@ -342,31 +351,35 @@ ASTNode* interpret_ast(ASTNode* node) {
         }
         case NODE_UMINUS: {
             ast_neg(node->children);
-            return node->children;
+            return create_result_from_node(node->children);
         }
         case NODE_PLUS: {
-            ASTNode* a = interpret_ast(node->children);
-            ASTNode* b = interpret_ast(node->children->next);
-            return ast_add(a, b);
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_add(a, b);
+            return result;
         }
         case NODE_MINUS: {
-            ASTNode* a = interpret_ast(node->children);
-            ASTNode* b = interpret_ast(node->children->next);
-            return ast_sub(a, b);
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_sub(a, b);
+            return result;
         }
         case NODE_MULT: {
-            ASTNode* a = interpret_ast(node->children);
-            ASTNode* b = interpret_ast(node->children->next);
-            return ast_mul(a, b);
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_mul(a, b);
+            return result;
         }
         case NODE_DIV: {
-            ASTNode* a = interpret_ast(node->children);
-            ASTNode* b = interpret_ast(node->children->next);
-            return ast_div(a, b);
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_div(a, b);
+            return result;
         }
         case NODE_FLOAT:
         case NODE_INT: {
-            return node;
+            return create_result_from_node(node);
             // return (double) *((int*)node->value);
         }
         default: {
@@ -376,6 +389,21 @@ ASTNode* interpret_ast(ASTNode* node) {
             assert(false);
         }
     }
+}
+
+void free_AST(ASTNode* root) {
+    if (root->children != NULL) {
+        ASTNode* next_child;
+        for (ASTNode* child = root->children; child;) {
+            next_child = child->next;
+            free_AST(child);
+            child = next_child;
+        }
+    }
+    if (root->value != NULL) {
+        free(root->value);
+    }
+    free(root);
 }
 
 void print_node(ASTNode* node) {

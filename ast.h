@@ -39,6 +39,17 @@ typedef struct ASTNode {
     struct ASTNode* next;
 } ASTNode;
 
+typedef enum  {
+    RESULT_INT,
+    RESULT_FLOAT
+} ResultType;
+
+typedef struct {
+    ResultType type;
+    int vali;
+    double valf;
+} Result;
+
 // ASTNode* ast_next_expr(Token** tokens);
 // ASTNode* ast_next_operator(Token** tokens);
 // ASTNode* ast_next_term(Token** tokens);
@@ -52,5 +63,7 @@ void print_node(ASTNode* node);
 void print_AST(ASTNode* root);
 
 ASTNode* build_AST(Token** tokens);
-ASTNode* interpret_ast(ASTNode* node);
+Result interpret_ast(ASTNode* node);
+
+void free_AST(ASTNode* ast);
 #endif // AST_H

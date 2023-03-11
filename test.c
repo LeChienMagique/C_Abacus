@@ -11,7 +11,7 @@
 #define SV_IMPLEMENTATION
 #include "./sv.h"
 
-static ASTNode* evaluate_input(char* input) {
+static Result evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
     size_t index = 0;
@@ -47,7 +47,6 @@ String_View next_input(String_View* inputs) {
     return input;
 }
 
-
 void save_test(const char* filepath, const char* filename, const char* dirpath) {
     char results_path[strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output")];
     results_path[0] = '\0';
@@ -70,13 +69,13 @@ void save_test(const char* filepath, const char* filename, const char* dirpath) 
         char input[sv_input.count + 1];
         sprintf(input, SV_Fmt, SV_Arg(sv_input));
 
-        ASTNode* result = evaluate_input(input);
-        if (result->type == NODE_INT) {
-            fprintf(results, "%d\n", *(int*) result->value);
-            printf("%s = %d\n", input, *(int*) result->value);
+        Result result = evaluate_input(input);
+        if (result.type == RESULT_INT) {
+            fprintf(results, "%d\n", result.vali);
+            printf("%s = %d\n", input, result.vali);
         } else {
-            fprintf(results, "%f\n", *(double*) result->value);
-            printf("%s = %f\n", input, *(double*) result->value);
+            fprintf(results, "%f\n", result.valf);
+            printf("%s = %f\n", input, result.valf);
         }
     }
     free(inputs);
@@ -109,12 +108,12 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
         char input[sv_input.count + 1];
         sprintf(input, SV_Fmt, SV_Arg(sv_input));
 
-        ASTNode* result = evaluate_input(input);
+        Result result = evaluate_input(input);
         char str_result[512]; // should be enough for everyone
-        if (result->type == NODE_INT) {
-            sprintf(str_result, "%d", *(int*) result->value);
+        if (result.type == RESULT_INT) {
+            sprintf(str_result, "%d", result.vali);
         } else {
-            sprintf(str_result, "%f", *(double*) result->value);
+            sprintf(str_result, "%f", result.valf);
         }
 
         char str_expected[sv_expected.count + 1];

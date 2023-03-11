@@ -1,122 +1,78 @@
 #include "./ast_operations.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <err.h>
 
-ASTNode* create_node(Token* token, int type);
-
-ASTNode* create_result_node(ASTNode* a, ASTNode* b) {
-    ASTNode* result;
-    if (a->type == NODE_FLOAT || b->type == NODE_FLOAT) {
+Result create_result(Result a, Result b) {
+    Result result = {0};
+    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
         // at least one float
-        result = create_node(NULL, NODE_FLOAT);
+        result.type = RESULT_FLOAT;
     } else {
         // both int
-        result = create_node(NULL, NODE_INT);
+        result.type = RESULT_INT;
     }
     return result;
 }
 
-void node_values_to_double(ASTNode* a, ASTNode* b, double* a_val, double* b_val) {
-    if (a->type == NODE_FLOAT) {
-        *a_val = *((double*) a->value);
+Result create_result_from_node(ASTNode* node) {
+    Result result = {0};
+    if (node->type == NODE_INT) {
+        result.type = RESULT_INT;
+        result.vali = *((int*) node->value);
+    } else if (node->type == NODE_FLOAT) {
+        result.type = RESULT_FLOAT;
+        result.valf = *((double*) node->value);
     } else {
-        *a_val = (double) *((int*) a->value);
-    }
-    if (b->type == NODE_FLOAT) {
-        *b_val = *((double*) b->value);
-    } else {
-        *b_val = (double) *((int*) b->value);
-    }
-}
-
-void cast_node_result(ASTNode* result_node, double* result) {
-    // result is freed if it is of incorrect type
-    if (result_node->type == NODE_INT) {
-        int* res_int = malloc(sizeof(int));
-        *res_int = (int) *result;
-        free(result);
-        result_node->value = (void*) res_int;
-    } else {
-        result_node->value = (void*) result;
-    }
-}
-
-ASTNode* ast_add(ASTNode* a, ASTNode* b) {
-    ASTNode* result;
-    if (a->type == NODE_FLOAT || b->type == NODE_FLOAT) {
-        // at least one float
-        result = create_node(NULL, NODE_FLOAT);
-        double a_val, b_val;
-        node_values_to_double(a, b, &a_val, &b_val);
-        double* add_res = malloc(sizeof(double));
-        *add_res = a_val + b_val;
-        result->value = (void*) add_res;
-    } else {
-        // both int
-        result = create_node(NULL, NODE_INT);
-        int* add_res = malloc(sizeof(int));
-        *add_res = *((int*) a->value) + *((int*) b->value);
-        result->value = (void*) add_res;
+        errx(EXIT_FAILURE, "Unknown value type");
     }
     return result;
 }
 
-ASTNode* ast_sub(ASTNode* a, ASTNode* b) {
-    ASTNode* result;
-    if (a->type == NODE_FLOAT || b->type == NODE_FLOAT) {
+Result ast_add(Result a, Result b) {
+    Result result = {0};
+    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
         // at least one float
-        result = create_node(NULL, NODE_FLOAT);
-        double a_val, b_val;
-        node_values_to_double(a, b, &a_val, &b_val);
-        double* add_res = malloc(sizeof(double));
-        *add_res = a_val - b_val;
-        result->value = (void*) add_res;
+        result.valf = a.valf + b.valf;
     } else {
         // both int
-        result = create_node(NULL, NODE_INT);
-        int* add_res = malloc(sizeof(int));
-        *add_res = *((int*) a->value) - *((int*) b->value);
-        result->value = (void*) add_res;
+        result.vali = a.vali + b.vali;
     }
     return result;
 }
 
-ASTNode* ast_mul(ASTNode* a, ASTNode* b) {
-    ASTNode* result;
-    if (a->type == NODE_FLOAT || b->type == NODE_FLOAT) {
+Result ast_sub(Result a, Result b) {
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
         // at least one float
-        result = create_node(NULL, NODE_FLOAT);
-        double a_val, b_val;
-        node_values_to_double(a, b, &a_val, &b_val);
-        double* add_res = malloc(sizeof(double));
-        *add_res = a_val * b_val;
-        result->value = (void*) add_res;
+        result.valf = a.valf - b.valf;
     } else {
         // both int
-        result = create_node(NULL, NODE_INT);
-        int* add_res = malloc(sizeof(int));
-        *add_res = *((int*) a->value) * (*((int*) b->value));
-        result->value = (void*) add_res;
+        result.vali = a.vali - b.vali;
     }
     return result;
 }
 
-ASTNode* ast_div(ASTNode* a, ASTNode* b) {
-    ASTNode* result;
-    if (a->type == NODE_FLOAT || b->type == NODE_FLOAT) {
+Result ast_mul(Result a, Result b) {
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
         // at least one float
-        result = create_node(NULL, NODE_FLOAT);
-        double a_val, b_val;
-        node_values_to_double(a, b, &a_val, &b_val);
-        double* add_res = malloc(sizeof(double));
-        *add_res = a_val / b_val;
-        result->value = (void*) add_res;
+        result.valf = a.valf * b.valf;
     } else {
         // both int
-        result = create_node(NULL, NODE_INT);
-        int* add_res = malloc(sizeof(int));
-        *add_res = *((int*) a->value) / *((int*) b->value);
-        result->value = (void*) add_res;
+        result.vali = a.vali * b.vali;
+    }
+    return result;
+}
+
+Result ast_div(Result a, Result b) {
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT || b.type == RESULT_FLOAT) {
+        // at least one float
+        result.valf = a.valf / b.valf;
+    } else {
+        // both int
+        result.vali = a.vali / b.vali;
     }
     return result;
 }
@@ -130,5 +86,7 @@ void ast_neg(ASTNode* node) {
         double value = *(double*) node->value;
         value *= -1;
         node->value = (void*) &value;
+    } else {
+        errx(1, "unreachable");
     }
 }

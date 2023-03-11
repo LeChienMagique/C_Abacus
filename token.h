@@ -21,5 +21,5 @@ typedef struct Token {
 
 void print_token(Token* token);
 Token* next_token(const char* input, size_t* index);
-
+void free_tokens(Token* tokens);
 #endif // TOKEN_H

@@ -88,7 +88,7 @@ void generate_dot(ASTNode* ast) {
     system("dot -Tsvg graph.dot > graph.svg");
 }
 
-ASTNode* evaluate_input(char* input) {
+Result evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
     size_t index = 0;
@@ -97,6 +97,7 @@ ASTNode* evaluate_input(char* input) {
         tokens = tokens->next;
     }
     if (DEBUG_MODE) {
+        printf("Tokens:\n");
         for (Token* token = sentinel->next; token; token = token->next) {
             print_token(token);
             printf("\n");
@@ -105,6 +106,7 @@ ASTNode* evaluate_input(char* input) {
     }
 
     ASTNode* ast = build_AST(&(sentinel->next));
+
     if (DEBUG_MODE) {
         print_AST(ast);
         printf("\n\n");
@@ -113,25 +115,29 @@ ASTNode* evaluate_input(char* input) {
         generate_dot(ast);
     }
 
-    return interpret_ast(ast);
+    Result result = interpret_ast(ast);
+
+    free_AST(ast);
+    return result;
 }
 
 
 void run(char* input) {
-    ASTNode* result = evaluate_input(input);
+    Result result = evaluate_input(input);
 
-    if (result->type == NODE_INT) {
-        printf("%s = %d\n", input, *((int*) result->value));
+    if (result.type == RESULT_INT) {
+        printf("%s = %d\n", input, result.vali);
     } else {
-        printf("%s = %f\n", input, *((double*) result->value));
+        printf("%s = %f\n", input,  result.valf);
     }
 }
 
 int main(int argc, char** argv) {
-    // TODO: write mode tests
+    // TODO: write more tests
     // TODO: functions (sqrt, ...)
     // TODO: free ast (lul)
     // TODO: use automaton to tokenize
+    // TODO: no memory leaks
     /*
     Usage:
     ./main <input> [options]: run input

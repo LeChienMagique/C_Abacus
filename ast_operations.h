@@ -3,11 +3,11 @@
 #include <stddef.h>
 #include "./ast.h"
 
-ASTNode* ast_add(ASTNode* a, ASTNode* b);
-ASTNode* ast_sub(ASTNode* a, ASTNode* b);
-ASTNode* ast_mul(ASTNode* a, ASTNode* b);
-ASTNode* ast_div(ASTNode* a, ASTNode* b);
+Result ast_add(Result a, Result b);
+Result ast_sub(Result a, Result b);
+Result ast_mul(Result a, Result b);
+Result ast_div(Result a, Result b);
 void ast_neg(ASTNode* node);
-
+Result create_result_from_node(ASTNode* node);
 
 #endif // AST_OPS_H_
