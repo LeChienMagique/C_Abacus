@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <err.h>
 #include <assert.h>
+#include <string.h>
 #include "./ast.h"
 #include "./ast_operations.h"
 /*
@@ -196,7 +197,10 @@ ASTNode* ast_next_operator(Token** tokens) {
             return NULL;
         }
     }
-    optor->value = (*tokens)->value;
+    size_t token_len = strlen((char*) (*tokens)->value);
+    void* value = malloc(token_len + 1);
+    memcpy(value, (*tokens)->value, token_len);
+    optor->value = value;
     advance_tokens(tokens);
     return optor;
 }
@@ -214,7 +218,10 @@ ASTNode* ast_next_unary(Token** tokens) {
             return NULL;
         }
     }
-    unary->value = (*tokens)->value;
+    size_t token_len = strlen((char*) (*tokens)->value);
+    void* value = malloc(token_len + 1);
+    memcpy(value, (*tokens)->value, token_len);
+    unary->value = value;
     advance_tokens(tokens);
     return unary;
 }

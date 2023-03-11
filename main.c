@@ -118,6 +118,7 @@ Result evaluate_input(char* input) {
     Result result = interpret_ast(ast);
 
     free_AST(ast);
+    free_tokens(sentinel);
     return result;
 }
 
