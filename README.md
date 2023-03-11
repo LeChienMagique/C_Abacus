@@ -6,13 +6,13 @@ I originally wanted to try to make an AST using a recursive-descent parser in C 
 This is my first time doing these kind of things with C so the code structure may be very sub-optimal but the goal is to improve by practice.
 
 ### Implemented:
-- +, -, *, /, with operator precedence
+- +, -, *, /, ^, with operator precedence
 - Unary + and -
 - Parenthesis
 - floating point numbers
 
 ### Not implemented:
-- ^ (exponent), %
+- %
 - Functions (sqrt, facto, max, min, isprime, fibo, gcd)
 - Variables
 - REPL
