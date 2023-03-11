@@ -4,6 +4,7 @@
 #include <err.h>
 #include <assert.h>
 #include "./ast.h"
+#include "./ast_operations.h"
 /*
 program = expr
 
@@ -116,7 +117,7 @@ ASTNode* ast_next_number(Token** tokens) {
         } break;
         case TOKEN_FLOAT: {
             number->type = NODE_FLOAT;
-            double* value = malloc(sizeof(float));
+            double* value = malloc(sizeof(double));
             *value = atof(number->token->value);
             number->value = (void*) value;
         } break;
@@ -334,7 +335,7 @@ ASTNode* build_AST(Token** tokens) {
     return ast;
 }
 
-double interpret_ast(ASTNode* node) {
+ASTNode* interpret_ast(ASTNode* node) {
     switch (node->type) {
         case NODE_UPLUS:
         case NODE_EXPR:
@@ -342,25 +343,33 @@ double interpret_ast(ASTNode* node) {
             return interpret_ast(node->children);
         }
         case NODE_UMINUS: {
-            return (-1) * interpret_ast(node->children);
+            ast_neg(node->children);
+            return node->children;
         }
         case NODE_PLUS: {
-            return interpret_ast(node->children) + interpret_ast(node->children->next);
+            ASTNode* a = interpret_ast(node->children);
+            ASTNode* b = interpret_ast(node->children->next);
+            return ast_add(a, b);
         }
         case NODE_MINUS: {
-            return interpret_ast(node->children) - interpret_ast(node->children->next);
+            ASTNode* a = interpret_ast(node->children);
+            ASTNode* b = interpret_ast(node->children->next);
+            return ast_sub(a, b);
         }
         case NODE_MULT: {
-            return interpret_ast(node->children) * interpret_ast(node->children->next);
+            ASTNode* a = interpret_ast(node->children);
+            ASTNode* b = interpret_ast(node->children->next);
+            return ast_mul(a, b);
         }
         case NODE_DIV: {
-            return interpret_ast(node->children) / interpret_ast(node->children->next);
+            ASTNode* a = interpret_ast(node->children);
+            ASTNode* b = interpret_ast(node->children->next);
+            return ast_div(a, b);
         }
+        case NODE_FLOAT:
         case NODE_INT: {
-            return (double) *((int*)node->value);
-        }
-        case NODE_FLOAT: {
-            return *((double*)node->value);
+            return node;
+            // return (double) *((int*)node->value);
         }
         default: {
             printf("unimplemented node: ");

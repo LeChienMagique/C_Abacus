@@ -8,7 +8,7 @@
 #include "./ast.h"
 #include "./token.h"
 
-static int evaluate_input(char* input) {
+static ASTNode* evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
     size_t index = 0;
@@ -18,8 +18,7 @@ static int evaluate_input(char* input) {
     }
 
     ASTNode* ast = build_AST(&(sentinel->next));
-    int result = interpret_ast(ast);
-    return result;
+    return interpret_ast(ast);
 }
 
 void save_test(const char* filepath, const char* filename, const char* dirpath) {
@@ -46,9 +45,14 @@ void save_test(const char* filepath, const char* filename, const char* dirpath) 
         if (input[nread - 1] == '\n') {
             input[nread - 1] = '\0';
         }
-        int result = evaluate_input(input);
-        fprintf(results, "%d\n", result);
-        printf("%s = %d\n", input, result);
+        ASTNode* result = evaluate_input(input);
+        if (result->type == NODE_INT) {
+            fprintf(results, "%s = %d\n", input, *(int*) result->value);
+            fprintf(stdout, "%s = %d\n", input, *(int*) result->value);
+        } else {
+            fprintf(results, "%s = %f\n", input, *(double*) result->value);
+            fprintf(stdout, "%s = %f\n", input, *(double*) result->value);
+        }
     }
 }
 
@@ -78,18 +82,28 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
         if (input[nread - 1] == '\n') {
             input[nread - 1] = '\0';
         }
-        int result = evaluate_input(input);
+        ASTNode* result = evaluate_input(input);
 
         n = 0;
         nread = getline(&expected, &n, results);
         if (nread == -1) {
             errx(1, "Different number of tests and results for test: %s", filepath);
         }
-        int expected_result = atoi(expected);
-        if (result != expected_result) {
-            printf("[ERROR] '%s' got %d expected %d\n", input, result, expected_result);
+
+        char str_result[512]; // should be enough for everyone
+        if (result->type == NODE_INT) {
+            sprintf(str_result, "%d", *(int*) result->value);
         } else {
-            printf("[PASSED] %s = %d\n", input, result);
+            sprintf(str_result, "%f", *(double*) result->value);
+        }
+
+        if (expected[nread - 1] == '\n') {
+            expected[nread - 1] = '\0';
+        }
+        if (strcmp(str_result, expected) != 0) {
+            printf("[ERROR] '%s' got '%s' expected '%s'\n", input, str_result, expected);
+        } else {
+            printf("[PASSED] %s = %s\n", input, str_result);
         }
     }
 }

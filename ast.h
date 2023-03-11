@@ -52,5 +52,5 @@ void print_node(ASTNode* node);
 void print_AST(ASTNode* root);
 
 ASTNode* build_AST(Token** tokens);
-double interpret_ast(ASTNode* node);
+ASTNode* interpret_ast(ASTNode* node);
 #endif // AST_H

@@ -12,19 +12,6 @@
 int GENERATE_GRAPH = 0;
 int DEBUG_MODE = 0;
 
-int evaluate_input(char* input) {
-    Token* tokens = calloc(1, sizeof(Token));
-    Token* sentinel = tokens;
-    size_t index = 0;
-    while (index < strlen(input)) {
-        tokens->next = next_token(input, &index);
-        tokens = tokens->next;
-    }
-
-    ASTNode* ast = build_AST(&(sentinel->next));
-    int result = interpret_ast(ast);
-    return result;
-}
 
 void print_usage() {
     fprintf(stderr, "Usage:\n");
@@ -101,19 +88,14 @@ void generate_dot(ASTNode* ast) {
     system("dot -Tsvg graph.dot > graph.svg");
 }
 
-void run(char* input) {
-    if (input == NULL) {
-        input = "14 * (-2) + 3";
-    }
-
+ASTNode* evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
     Token* sentinel = tokens;
     size_t index = 0;
-    while (input[index] != '\0') {
+    while (index < strlen(input)) {
         tokens->next = next_token(input, &index);
         tokens = tokens->next;
     }
-
     if (DEBUG_MODE) {
         for (Token* token = sentinel->next; token; token = token->next) {
             print_token(token);
@@ -127,18 +109,26 @@ void run(char* input) {
         print_AST(ast);
         printf("\n\n");
     }
-
-    double result = interpret_ast(ast);
-    printf("%s = %f\n", input, result);
-
     if (GENERATE_GRAPH) {
         generate_dot(ast);
+    }
+
+    return interpret_ast(ast);
+}
+
+
+void run(char* input) {
+    ASTNode* result = evaluate_input(input);
+
+    if (result->type == NODE_INT) {
+        printf("%s = %d\n", input, *((int*) result->value));
+    } else {
+        printf("%s = %f\n", input, *((double*) result->value));
     }
 }
 
 
 int main(int argc, char** argv) {
-    // TODO: properly implement float and int using a Result struct ?
     // TODO: functions (sqrt, ...)
     // TODO: free ast (lul)
     // TODO: use automaton to tokenize

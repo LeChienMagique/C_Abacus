@@ -9,7 +9,7 @@ This is my first time doing these kind of things with C so the code structure ma
 - +, -, *, /, with operator precedence
 - Unary + and -
 - Parenthesis
-- floating point numbers (dirty implementation for now)
+- floating point numbers
 
 ### Not implemented:
 - ^ (exponent), %
