@@ -27,6 +27,12 @@ ASTNode* ast_next_number(Token** tokens);
 
 void advance_tokens(Token** tokens) {
     Token* next = (*tokens)->next;
+    if ((*tokens)->type == TOKEN_OPARENTHESIS || (*tokens)->type == TOKEN_CPARENTHESIS) {
+        if ((*tokens)->value) {
+            free((*tokens)->value);
+        }
+        free(*tokens);
+    }
     // if ((*tokens)->value) {
     //     free((*tokens)->value);
     // }

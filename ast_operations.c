@@ -39,113 +39,97 @@ void check_zero_result(Result* result) {
     }
 }
 
-Result ast_add(Result a, Result b) {
+Result ast_do_binop(Result a, Result b, int (*funi) (int, int), double (*funf) (double, double)) {
     Result result = create_result(a, b);
     if (a.type == RESULT_FLOAT) {
         if (b.type == RESULT_FLOAT) {
-            result.valf = a.valf + b.valf;
+            result.valf = funf(a.valf, b.valf);
         } else {
-            result.valf = a.valf + ((double) b.vali);
+            result.valf = funf(a.valf, ((double) b.vali));
         }
-        result.type = RESULT_FLOAT;
     } else if (b.type == RESULT_FLOAT) {
-        result.valf = ((double) a.vali) + b.valf;
+        result.valf = funf(((double) a.vali), b.valf);
     } else {
-        result.vali = a.vali + b.vali;
+        result.vali = funi(((int) a.vali), b.vali);
     }
     check_zero_result(&result);
     return result;
 }
+
+int addi(int a, int b) { return a + b; }
+double addf(double a, double b) { return a + b; }
+
+Result ast_add(Result a, Result b) {
+    return ast_do_binop(a, b, addi, addf);
+}
+
+int subi(int a, int b) { return a - b; }
+double subf(double a, double b) { return a - b; }
 
 Result ast_sub(Result a, Result b) {
-    Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT) {
-        if (b.type == RESULT_FLOAT) {
-            result.valf = a.valf - b.valf;
-        } else {
-            result.valf = a.valf - ((double) b.vali);
-        }
-    } else if (b.type == RESULT_FLOAT) {
-        result.valf = ((double) a.vali) - b.valf;
-    } else {
-        result.vali = a.vali - b.vali;
-    }
-    check_zero_result(&result);
-    return result;
+    return ast_do_binop(a, b, subi, subf);
 }
+
+
+int muli(int a, int b) { return a * b; }
+double mulf(double a, double b) { return a * b; }
 
 Result ast_mul(Result a, Result b) {
-    Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT) {
-        if (b.type == RESULT_FLOAT) {
-            result.valf = a.valf * b.valf;
-        } else {
-            result.valf = a.valf * ((double) b.vali);
-        }
-    } else if (b.type == RESULT_FLOAT) {
-        result.valf = ((double) a.vali) * b.valf;
-    } else {
-        result.vali = a.vali * b.vali;
-    }
-    check_zero_result(&result);
-    return result;
+    return ast_do_binop(a, b, muli, mulf);
 }
 
+
+int divi(int a, int b) { return a / b; }
+double divf(double a, double b) { return a / b; }
+
 Result ast_div(Result a, Result b) {
-    Result result = create_result(a, b);
     if (b.type == RESULT_FLOAT) {
         if (b.valf == 0) {
             errx(EXIT_FAILURE, "Division by zero");
         }
-        if (a.type == RESULT_FLOAT) {
-            result.valf = a.valf / b.valf;
-        } else {
-            result.valf = ((double) a.vali) / b.valf;
-        }
     } else if (b.vali == 0) {
         errx(EXIT_FAILURE, "Division by zero");
-    } else if (a.type == RESULT_FLOAT) {
-        result.valf = a.valf / ((double) b.vali);
-    } else {
-        result.vali = a.vali / b.vali;
     }
-    check_zero_result(&result);
-    return result;
+    return ast_do_binop(a, b, divi, divf);
 }
 
 Result ast_exp(Result a, Result b) {
-    // TODO: check for a = 0 and b < 0
     Result result = create_result(a, b);
     if (a.type == RESULT_FLOAT) {
         if (b.type == RESULT_FLOAT) {
+            if (a.valf == 0 && b.valf < 0) {
+                errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+            }
             result.valf = pow(a.valf, b.valf);
         } else {
-            result.valf = pow(a.valf, (double) b.vali);
+            if (a.valf == 0 && b.vali < 0) {
+                errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+            }
+            result.valf = pow(a.valf, b.vali);
         }
     } else if (b.type == RESULT_FLOAT) {
+        if (a.vali == 0 && b.valf < 0) {
+            errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+        }
+
         result.valf = pow((double) a.vali, b.valf);
     } else {
+        if (a.vali == 0 && b.vali < 0) {
+            errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+        }
+
         result.vali = (int) pow(a.vali, b.vali);
     }
     check_zero_result(&result);
     return result;
 }
 
+int imod(int a, int b) {
+    return (int) fmod(a, b);
+}
+
 Result ast_mod(Result a, Result b) {
-    Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT) {
-        if (b.type == RESULT_FLOAT) {
-            result.valf = fmod(a.valf, b.valf);
-        } else {
-            result.valf = fmod(a.valf, (double) b.vali);
-        }
-    } else if (b.type == RESULT_FLOAT) {
-        result.valf = fmod((double) a.vali, b.valf);
-    } else {
-        result.vali = (int) fmod(a.vali, b.vali);
-    }
-    check_zero_result(&result);
-    return result;
+    return ast_do_binop(a, b, imod, fmod);
 }
 
 Result ast_equal(Result a, Result b) {
@@ -162,23 +146,6 @@ Result ast_equal(Result a, Result b) {
     } else {
         result.vali = ((int) a.vali) == b.vali;
     }
-    return result;
-}
-
-Result ast_do_binop(Result a, Result b, int (*funi) (int, int), double (*funf) (double, double)) {
-    Result result = create_result(a, b);
-    if (a.type == RESULT_FLOAT) {
-        if (b.type == RESULT_FLOAT) {
-            result.valf = funf(a.valf, b.valf);
-        } else {
-            result.valf = funf(a.valf, ((double) b.vali));
-        }
-    } else if (b.type == RESULT_FLOAT) {
-        result.valf = funf(((double) a.vali), b.valf);
-    } else {
-        result.vali = funi(((int) a.vali), b.vali);
-    }
-    check_zero_result(&result);
     return result;
 }
 
