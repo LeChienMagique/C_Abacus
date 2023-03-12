@@ -74,6 +74,18 @@ int get_function_arity(ASTNode* func) {
     else if (strcmp(func_name, "fibo") == 0) {
         return 1;
     }
+    else if (strcmp(func_name, "min") == 0) {
+        return 2;
+    }
+    else if (strcmp(func_name, "max") == 0) {
+        return 2;
+    }
+    else if (strcmp(func_name, "isprime") == 0) {
+        return 1;
+    }
+    else if (strcmp(func_name, "gcd") == 0) {
+        return 2;
+    }
     else {
         printf("[ERROR] Arity not implemented for: ");
         print_node(func);
@@ -237,6 +249,7 @@ ASTNode* ast_next_operand(Token** tokens) {
             }
 
             while (*tokens != NULL && (*tokens)->type == TOKEN_COMMA) {
+                advance_tokens(tokens);
                 expr = ast_next_expr(tokens);
                 if (expr == NULL) {
                     printf("[ERROR] Expected expression but got: ");
@@ -393,7 +406,7 @@ ASTNode* ast_next_term(Token** tokens) {
             term->children = NULL;
             append_child(term, optor);
         }
-
+{}
         operand = ast_next_operand(tokens);
         append_child(optor, operand);
 
