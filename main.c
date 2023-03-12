@@ -147,7 +147,7 @@ void run(char* input) {
 }
 
 int main(int argc, char** argv) {
-    // TODO: functions (sqrt, ...)
+    // TODO: functions (facto, max, min, isprime, fibo, gcd)
     // TODO: free tokens during ast_free using the token field
     // TODO: use automaton to tokenize
     /*
