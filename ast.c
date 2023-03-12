@@ -15,8 +15,9 @@ term = [unary] operand {operator operand}
 
 operand = number
         | '(' expr ')'
+        | symbol'(' expr {',' expr} ')'
 
-operator = + | - | * | /
+operator = + | - | * | / | ^ | % | ==
 */
 ASTNode* ast_next_expr(Token** tokens);
 ASTNode* ast_next_operator(Token** tokens);
@@ -26,10 +27,10 @@ ASTNode* ast_next_number(Token** tokens);
 
 void advance_tokens(Token** tokens) {
     Token* next = (*tokens)->next;
-    if ((*tokens)->value) {
-        free((*tokens)->value);
-    }
-    free(*tokens);
+    // if ((*tokens)->value) {
+    //     free((*tokens)->value);
+    // }
+    // free(*tokens);
     *tokens = next;
 }
 
@@ -52,6 +53,25 @@ void append_child(ASTNode* node, ASTNode* child) {
 }
 
 
+int get_function_arity(ASTNode* func) {
+    char* func_name = (char*) func->token->value;
+    if (func_name == NULL) {
+        assert(false && "unreachable");
+    }
+
+    if (strcmp(func_name, "sqrt") == 0) {
+        return 1;
+    }
+    else {
+        printf("[ERROR] Arity not implemented for: ");
+        print_node(func);
+        printf("\n");
+        assert(false);
+    }
+
+}
+
+
 bool ast_is_operator(ASTNode* node) {
     switch (node->type) {
         case NODE_UMINUS:
@@ -65,6 +85,7 @@ bool ast_is_operator(ASTNode* node) {
         case NODE_MULT: {
             return true;
         }
+        case NODE_FUNCTION:
         case NODE_EXPR:
         case NODE_TERM:
         case NODE_INT:
@@ -178,13 +199,55 @@ ASTNode* ast_next_number(Token** tokens) {
 ASTNode* ast_next_operand(Token** tokens) {
     //operand = number
     //        | ( expr )
+    //        | symbol'(' expr {',' expr} ')'
     if (*tokens == NULL) {
         return NULL;
     }
 
+    // number
     ASTNode* op = ast_next_number(tokens);
     if (op) {
         return op;
+    }
+
+    // symbol'(' expr {',' expr} ')'
+    if ((*tokens)->type == TOKEN_SYMBOL) {
+        ASTNode* symbol = create_node(*tokens, -1);
+        advance_tokens(tokens);
+
+        if ((*tokens)->type == TOKEN_OPARENTHESIS) {
+            symbol->type = NODE_FUNCTION;
+            advance_tokens(tokens);
+
+            ASTNode* expr = ast_next_expr(tokens);
+            if (expr) {
+                append_child(symbol, expr);
+            }
+
+            while (*tokens != NULL && (*tokens)->type == TOKEN_COMMA) {
+                expr = ast_next_expr(tokens);
+                if (expr == NULL) {
+                    printf("[ERROR] Expected expression but got: ");
+                    print_token(*tokens);
+                    printf("\n");
+                    assert(false);
+                }
+                append_child(symbol, expr);
+            }
+
+            if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
+                printf("[ERROR] Mismatched parenthesis\n");
+                assert(false);
+            }
+            advance_tokens(tokens);
+        } else {
+            printf("[ERROR] Expected parenthesis followed by expression but got: ");
+            print_token(*tokens);
+            printf("\n");
+            assert(false);
+        }
+
+        return symbol;
     }
 
     if ((*tokens)->type != TOKEN_OPARENTHESIS) {
@@ -392,6 +455,33 @@ ASTNode* build_AST(Token** tokens) {
     return ast;
 }
 
+Result* build_function_arguments(ASTNode* func, int* argc) {
+    int arity = get_function_arity(func);
+
+    int child_count = 0;
+    for (ASTNode* child = func->children; child; child = child->next) {
+        child_count++;
+    }
+
+    if (child_count != arity) {
+        printf("[ERROR] Invalid number of arguments for function: ");
+        print_node(func);
+        printf("\n");
+        exit(EXIT_FAILURE);
+    }
+
+    *argc = arity;
+
+    Result* args = malloc(child_count * sizeof(Result));
+    int i = 0;
+    for (ASTNode* child = func->children; child; child = child->next) {
+        args[i] = interpret_ast(child);
+        i++;
+    }
+    return args;
+}
+
+
 Result interpret_ast(ASTNode* node) {
     switch (node->type) {
         case NODE_UPLUS:
@@ -447,7 +537,14 @@ Result interpret_ast(ASTNode* node) {
         case NODE_FLOAT:
         case NODE_INT: {
             return create_result_from_node(node);
-            // return (double) *((int*)node->value);
+        }
+        case NODE_FUNCTION: {
+            int argc;
+            Result* argv = build_function_arguments(node, &argc);
+            assert(node->token != NULL);
+            Result result = ast_evaluate_function(node->token->value, argc, argv);
+            free(argv);
+            return result;
         }
         default: {
             printf("unimplemented node: ");
@@ -467,9 +564,18 @@ void free_AST(ASTNode* root) {
             child = next_child;
         }
     }
+
     if (root->value != NULL) {
         free(root->value);
     }
+
+    if (root->token) {
+        if (root->token->value) {
+            free(root->token->value);
+        }
+        free(root->token);
+    }
+
     free(root);
 }
 
@@ -513,6 +619,9 @@ void print_node(ASTNode* node) {
         } break;
         case NODE_EQUALITY: {
             printf("NodeEquality");
+        } break;
+        case NODE_FUNCTION: {
+            printf("NodeFunction(%s)", node->token->value);
         } break;
     }
     if (false && node->token) {

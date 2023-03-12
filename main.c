@@ -16,7 +16,7 @@ int DEBUG_MODE = 0;
 void print_usage() {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  ./main <input> [options] : run input\n");
-    fprintf(stderr, "  ./main test run : run tests\n");
+    fprintf(stderr, "  ./main test run [options] : run tests\n");
     fprintf(stderr, "  ./main test save : save expected results\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  --debug               Print debug informations\n");
@@ -60,6 +60,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         } break;
         case NODE_TERM: {
             fprintf(f, "[label=\"Term\"]\n");
+        } break;
+        case NODE_FUNCTION: {
+            fprintf(f, "[label=\"Func\"]\n");
         } break;
     }
 }
@@ -144,8 +147,8 @@ void run(char* input) {
 }
 
 int main(int argc, char** argv) {
-    // TODO: write more tests
     // TODO: functions (sqrt, ...)
+    // TODO: free tokens during ast_free using the token field
     // TODO: use automaton to tokenize
     /*
     Usage:

@@ -99,6 +99,7 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
 
     String_View sv_input;
     String_View sv_expected;
+    bool passed = true;
     while (sv_inputs.count > 0 && sv_outputs.count > 0) {
         sv_input = next_input(&sv_inputs);
         if (sv_input.count == 0) {
@@ -121,8 +122,9 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
         sprintf(str_expected, SV_Fmt, SV_Arg(sv_expected));
         if (strcmp(str_result, str_expected)) {
             printf("[ERROR] '%s' got '%s' expected '%s'\n", input, str_result, str_expected);
+            passed = false;
         } else {
-            printf("[PASSED] %s = %s\n", input, str_result);
+            // printf("[PASSED] %s = %s\n", input, str_result);
         }
     }
     free(inputs);
@@ -131,6 +133,11 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
         printf("[ERROR] Different number of tests and results\n");
     }
 
+    if (passed) {
+        printf("[PASSED] All tests passed for %s\n", filepath);
+    } else {
+        printf("[ERROR] At least one test failed for %s\n", filepath);
+    }
 }
 
 

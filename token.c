@@ -147,6 +147,17 @@ Token* token_next_operator(const char* input, size_t* index) {
     return token;
 }
 
+Token* token_next_symbol(const char* input, size_t* index) {
+    char c = input[*index];
+    size_t start = *index;
+    // TODO: allow symbols to have alphanumeric chars
+    while (c != '\0' && is_letter(c)) {
+        c = input[++(*index)];
+    }
+    size_t end = *index;
+    return create_token(TOKEN_SYMBOL, input + start, end - start);
+}
+
 Token* next_token(const char* input, size_t* index) {
     char c = input[*index];
     while (c != '\0') {
@@ -160,6 +171,10 @@ Token* next_token(const char* input, size_t* index) {
             return create_token(TOKEN_OPARENTHESIS, input + (*index)++, 1);
         } else if (c == ')') {
             return create_token(TOKEN_CPARENTHESIS, input + (*index)++, 1);
+        } else if (is_letter(c)) {
+            return token_next_symbol(input, index);
+        } else if (c == ',') {
+            return create_token(TOKEN_COMMA, input + (*index)++, 1);
         }
         else {
             printf("[ERROR] unknown token starting with char: %d at index %lu\n", (int) input[*index], *index);

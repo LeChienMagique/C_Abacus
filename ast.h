@@ -17,7 +17,8 @@ typedef enum {
     NODE_EXP,
     NODE_MOD,
     NODE_EQUALITY,
-    // nodes
+    //
+    NODE_FUNCTION,
     NODE_EXPR,
     NODE_TERM,
 } NodeType;
@@ -48,6 +49,8 @@ typedef enum {
 
 
 typedef struct ASTNode {
+    // TODO: remove token field as tokens get freed during ast building
+    //       Or don't free tokens during ast building
     Token* token;
     void* value;
     NodeType type;

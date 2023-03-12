@@ -5,6 +5,7 @@
 typedef enum {
     TOKEN_INT,
     TOKEN_FLOAT,
+    // operators
     TOKEN_PLUS,
     TOKEN_MINUS,
     TOKEN_MULT,
@@ -12,8 +13,11 @@ typedef enum {
     TOKEN_EXP,
     TOKEN_MOD,
     TOKEN_EQUALITY,
+    //
     TOKEN_OPARENTHESIS,
     TOKEN_CPARENTHESIS,
+    TOKEN_SYMBOL,
+    TOKEN_COMMA
 } TokenType;
 
 typedef struct Token {

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <err.h>
 #include <math.h>
+#include <string.h>
+#include <assert.h>
 
 Result create_result(Result a, Result b) {
     Result result = {0};
@@ -163,7 +165,22 @@ Result ast_equal(Result a, Result b) {
     return result;
 }
 
-
+Result ast_do_binop(Result a, Result b, int (*funi) (int, int), double (*funf) (double, double)) {
+    Result result = create_result(a, b);
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.valf = funf(a.valf, b.valf);
+        } else {
+            result.valf = funf(a.valf, ((double) b.vali));
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.valf = funf(((double) a.vali), b.valf);
+    } else {
+        result.vali = funi(((int) a.vali), b.vali);
+    }
+    check_zero_result(&result);
+    return result;
+}
 
 Result ast_neg(Result x) {
     return (Result) {
@@ -171,4 +188,29 @@ Result ast_neg(Result x) {
         .vali = -(x.vali),
         .valf = -(x.valf)
     };
+}
+
+Result ast_evaluate_function(const char* func_name, int argc, Result* argv) {
+    Result result = {0};
+    if (strcmp(func_name, "sqrt") == 0) {
+        double x;
+        if (argv[0].type == RESULT_INT) {
+            x = (double) argv[0].vali;
+        } else {
+            x = argv[0].valf;
+        }
+
+        if (x < 0) {
+            errx(EXIT_FAILURE, "[ERROR] Domain error, sqrt(x) where x < 0");
+        }
+
+        result.type = RESULT_FLOAT;
+        result.valf = sqrt(x);
+    }
+    else {
+        assert(false && "unreachable");
+    }
+    assert(argc >= 0); // remove annoying unused parameter warning
+    check_zero_result(&result);
+    return result;
 }
