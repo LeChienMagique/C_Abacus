@@ -68,6 +68,12 @@ int get_function_arity(ASTNode* func) {
     if (strcmp(func_name, "sqrt") == 0) {
         return 1;
     }
+    else if (strcmp(func_name, "facto") == 0) {
+        return 1;
+    }
+    else if (strcmp(func_name, "fibo") == 0) {
+        return 1;
+    }
     else {
         printf("[ERROR] Arity not implemented for: ");
         print_node(func);

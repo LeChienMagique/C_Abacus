@@ -10,10 +10,10 @@ This is my first time doing these kind of things with C so the code structure ma
 - Unary + and -
 - Parenthesis
 - Floating point numbers
-- Functions (sqrt)
+- Functions (sqrt, facto, fibo)
 
 ### Not implemented:
-- Functions (facto, max, min, isprime, fibo, gcd)
+- Functions (max, min, isprime, gcd)
 - Variables
 - REPL
 

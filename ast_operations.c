@@ -157,27 +157,91 @@ Result ast_neg(Result x) {
     };
 }
 
-Result ast_evaluate_function(const char* func_name, int argc, Result* argv) {
+Result ast_sqrt(Result x) {
     Result result = {0};
-    if (strcmp(func_name, "sqrt") == 0) {
-        double x;
-        if (argv[0].type == RESULT_INT) {
-            x = (double) argv[0].vali;
-        } else {
-            x = argv[0].valf;
-        }
+    result.type = RESULT_FLOAT;
 
-        if (x < 0) {
-            errx(EXIT_FAILURE, "[ERROR] Domain error, sqrt(x) where x < 0");
-        }
+    double x_val;
+    if (x.type == RESULT_INT) {
+        x_val = (double) x.vali;
+    } else {
+        x_val = x.valf;
+    }
 
+    if (x_val < 0) {
+        errx(EXIT_FAILURE, "[ERROR] Domain error, sqrt(x) where x < 0");
+    }
+
+    result.valf = sqrt(x_val);
+    return result;
+}
+
+int facti(int n) {
+    if (n == 0) {
+        return 1;
+    }
+    return n * facti(n - 1);
+}
+
+Result ast_facto(Result x) {
+    Result result = {0};
+    if (x.type == RESULT_INT) {
+        if (x.vali < 0) {
+            errx(EXIT_FAILURE, "[ERROR] Domain error, facto(x) where x < 0");
+        }
+        result.type = RESULT_INT;
+        result.vali = facti(x.vali);
+
+    } else {
+        if (x.valf < -1) {
+            errx(EXIT_FAILURE, "[ERROR] Domain error, facto(x) where x < 0");
+        }
         result.type = RESULT_FLOAT;
-        result.valf = sqrt(x);
+        result.valf = tgamma(x.valf + 1);
+    }
+    check_zero_result(&result);
+    return result;
+}
+
+int fibo(int n) {
+    if (n == 0 || n == 1) {
+        return n;
+    }
+    return fibo(n - 1) + fibo(n - 2);
+}
+
+Result ast_fibo(Result n) {
+    Result result = {
+        .type = RESULT_INT
+    };
+
+    int n_val;
+    if (n.type == RESULT_FLOAT) {
+        n_val = (int) n.valf;
+    } else {
+        n_val = n.vali;
+    }
+
+    if (n_val < 0) {
+        errx(EXIT_FAILURE, "[ERROR] Domain error fibo(n) where n < 0");
+    }
+
+    result.vali = fibo(n_val);
+    return result;
+}
+
+Result ast_evaluate_function(const char* func_name, int argc, Result* argv) {
+    if (strcmp(func_name, "sqrt") == 0) {
+        return ast_sqrt(argv[0]);
+    }
+    else if (strcmp(func_name, "facto") == 0) {
+        return ast_facto(argv[0]);
+    }
+    else if (strcmp(func_name, "fibo") == 0) {
+        return ast_fibo(argv[0]);
     }
     else {
         assert(false && "unreachable");
     }
     assert(argc >= 0); // remove annoying unused parameter warning
-    check_zero_result(&result);
-    return result;
 }
