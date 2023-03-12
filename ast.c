@@ -9,9 +9,7 @@
 /*
 program = expr
 
-expr = term {operator term}
-
-term = [unary] operand {operator operand}
+expr = [unary] operand {operator operand}
 
 operand = number
         | '(' expr ')'
@@ -21,13 +19,13 @@ operator = + | - | * | / | ^ | % | ==
 */
 ASTNode* ast_next_expr(Token** tokens);
 ASTNode* ast_next_operator(Token** tokens);
-ASTNode* ast_next_term(Token** tokens);
 ASTNode* ast_next_operand(Token** tokens);
 ASTNode* ast_next_number(Token** tokens);
 
 void advance_tokens(Token** tokens) {
     Token* next = (*tokens)->next;
-    if ((*tokens)->type == TOKEN_OPARENTHESIS || (*tokens)->type == TOKEN_CPARENTHESIS) {
+    TokenType type = (*tokens)->type;
+    if (type == TOKEN_OPARENTHESIS || type == TOKEN_CPARENTHESIS) {
         if ((*tokens)->value) {
             free((*tokens)->value);
         }
@@ -356,12 +354,37 @@ ASTNode* ast_next_unary(Token** tokens) {
     return unary;
 }
 
-ASTNode* ast_next_term(Token** tokens) {
+void ast_add_operator(ASTNode* optor, ASTNode* root) {
+    if (ast_is_operator(root->children)) {
+        // root->children replace with last operator
+        if (get_operator_precedence(root->children) < get_operator_precedence(optor)) {
+            ASTNode* before_last_operand = root->children->children;
+            for (unsigned int i = 0; i < (get_operator_arity(root->children) - 2); i++) {
+                before_last_operand = before_last_operand->next;
+            }
+            optor->children = before_last_operand->next;
+            before_last_operand->next = NULL;
+            append_child(root->children, optor);
+        }
+        else {
+            optor->children = root->children;
+            root->children = NULL;
+            append_child(root, optor);
+        }
+    }
+    else {
+        optor->children = root->children;
+        root->children = NULL;
+        append_child(root, optor);
+    }
+}
+
+ASTNode* ast_next_expr(Token** tokens) {
     if (*tokens == NULL) {
         return NULL;
     }
-    // term = [+ | -] operand {operator operand}
-    ASTNode* term = create_node(NULL, NODE_TERM);
+    // expr = [+ | -] operand {(operator operand) | ("(" operand ")")}
+    ASTNode* expr = create_node(NULL, NODE_EXPR);
 
     // [+ | -]
     ASTNode* unary = ast_next_unary(tokens);
@@ -376,91 +399,41 @@ ASTNode* ast_next_term(Token** tokens) {
     }
     if (unary) {
         append_child(unary, operand);
-        append_child(term, unary);
+        append_child(expr, unary);
     } else {
-        append_child(term, operand);
+        append_child(expr, operand);
     }
 
     // {operator operand}
     ASTNode* optor = ast_next_operator(tokens);
-    while (optor != NULL) {
-        if (ast_is_operator(term->children)) {
-            // term->children replace with last operator
-            if (get_operator_precedence(term->children) < get_operator_precedence(optor)) {
-                ASTNode* before_last_operand = term->children->children;
-                for (unsigned int i = 0; i < (get_operator_arity(term->children) - 2); i++) {
-                    before_last_operand = before_last_operand->next;
-                }
-                optor->children = before_last_operand->next;
-                before_last_operand->next = NULL;
-                append_child(term->children, optor);
-            }
-            else {
-                optor->children = term->children;
-                term->children = NULL;
-                append_child(term, optor);
-            }
+    if (optor != NULL) {
+        while (optor != NULL) {
+            ast_add_operator(optor, expr);
+
+            operand = ast_next_operand(tokens);
+            append_child(optor, operand);
+
+            optor = ast_next_operator(tokens);
         }
-        else {
-            optor->children = term->children;
-            term->children = NULL;
-            append_child(term, optor);
-        }
-{}
+    }
+
+    // "(" operand ")"
+    while (*tokens != NULL && (*tokens)->type == TOKEN_OPARENTHESIS) {
+        optor = create_node(NULL, NODE_MULT);
+        ast_add_operator(optor, expr);
+
+        advance_tokens(tokens);
+
         operand = ast_next_operand(tokens);
         append_child(optor, operand);
 
-        optor = ast_next_operator(tokens);
-    }
-    return term;
-}
-
-ASTNode* ast_next_expr(Token** tokens) {
-    if (*tokens == NULL) {
-        return NULL;
-    }
-
-    // expr = term {operator term}
-    ASTNode* expr = create_node(NULL, NODE_EXPR);
-
-    // term
-    ASTNode* term = ast_next_term(tokens);
-    if (term == NULL) {
-        return NULL;
-    }
-    append_child(expr, term);
-
-    // {operator term}
-    ASTNode* optor = ast_next_operator(tokens);
-    while (optor) {
-        if (ast_is_operator(expr->children)) {
-            // expr->children replace with last operator
-            if (get_operator_precedence(expr->children) < get_operator_precedence(optor)) {
-                ASTNode* before_last_operand = expr->children->children;
-                for (unsigned int i = 0; i < (get_operator_arity(expr->children) - 2); i++) {
-                    before_last_operand = before_last_operand->next;
-                }
-                optor->children = before_last_operand->next;
-                before_last_operand->next = NULL;
-                append_child(expr->children, optor);
-                // append_child(expr, );
-            } else {
-                optor->children = expr->children;
-                expr->children = NULL;
-                append_child(expr, optor);
-            }
+        if ((*tokens)->type != TOKEN_CPARENTHESIS) {
+            errx(EXIT_FAILURE, "Mismatched parenthesis");
         }
-        else {
-            optor->children = expr->children;
-            expr->children = NULL;
-            append_child(expr, optor);
-        }
+        advance_tokens(tokens);
 
-        term = ast_next_term(tokens);
-        append_child(optor, term);
-
-        optor = ast_next_operator(tokens);
     }
+
     return expr;
 }
 
