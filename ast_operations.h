@@ -9,6 +9,7 @@ Result ast_mul(Result a, Result b);
 Result ast_div(Result a, Result b);
 Result ast_exp(Result a, Result b);
 Result ast_mod(Result a, Result b);
+Result ast_equal(Result a, Result b);
 Result ast_neg(Result x);
 Result create_result_from_node(ASTNode* node);
 

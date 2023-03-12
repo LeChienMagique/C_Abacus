@@ -16,27 +16,34 @@ typedef enum {
     NODE_MULT,
     NODE_EXP,
     NODE_MOD,
+    NODE_EQUALITY,
     // nodes
     NODE_EXPR,
     NODE_TERM,
 } NodeType;
 
 typedef enum {
+    OP_EQUALITY = 8,
     OP_PLUS = 11,
     OP_MINUS = 11,
     OP_DIV = 12,
     OP_MULT = 12,
     OP_MOD = 12,
     OP_EXP = 13,
+    OP_UMINUS = 14,
+    OP_UPLUS = 14,
 } OpPrecedence;
 
 typedef enum {
+    AR_UMINUS = 1,
+    AR_UPLUS = 1,
     AR_PLUS = 2,
     AR_MINUS = 2,
     AR_DIV = 2,
     AR_MULT = 2,
     AR_EXP = 2,
     AR_MOD = 2,
+    AR_EQUALITY = 2
 } OpArity;
 
 

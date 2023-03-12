@@ -146,6 +146,23 @@ Result ast_mod(Result a, Result b) {
     return result;
 }
 
+Result ast_equal(Result a, Result b) {
+    Result result = {0};
+    result.type = RESULT_INT;
+    if (a.type == RESULT_FLOAT) {
+        if (b.type == RESULT_FLOAT) {
+            result.vali = a.valf == b.valf;
+        } else {
+            result.vali = a.valf == ((double) b.vali);
+        }
+    } else if (b.type == RESULT_FLOAT) {
+        result.vali = ((double) a.vali) == b.valf;
+    } else {
+        result.vali = ((int) a.vali) == b.vali;
+    }
+    return result;
+}
+
 
 
 Result ast_neg(Result x) {

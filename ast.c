@@ -54,18 +54,25 @@ void append_child(ASTNode* node, ASTNode* child) {
 
 bool ast_is_operator(ASTNode* node) {
     switch (node->type) {
+        case NODE_UMINUS:
+        case NODE_UPLUS:
         case NODE_MINUS:
         case NODE_PLUS:
         case NODE_DIV:
         case NODE_EXP:
         case NODE_MOD:
+        case NODE_EQUALITY:
         case NODE_MULT: {
             return true;
         }
-        default: {
+        case NODE_EXPR:
+        case NODE_TERM:
+        case NODE_INT:
+        case NODE_FLOAT: {
             return false;
         }
     }
+    assert(false && "unreachable");
 }
 
 OpArity get_operator_arity(ASTNode* optor) {
@@ -87,6 +94,9 @@ OpArity get_operator_arity(ASTNode* optor) {
         }
         case NODE_MOD: {
             return AR_MOD;
+        }
+        case NODE_EQUALITY: {
+            return AR_EQUALITY;
         }
         default: {
             printf("[ERROR] operator arity not implemented for: ");
@@ -116,6 +126,15 @@ OpPrecedence get_operator_precedence(ASTNode* optor) {
         }
         case NODE_EXP: {
             return OP_EXP;
+        }
+        case NODE_EQUALITY: {
+            return OP_EQUALITY;
+        }
+        case NODE_UPLUS: {
+            return OP_PLUS;
+        }
+        case NODE_UMINUS: {
+            return OP_UMINUS;
         }
         default: {
             printf("[ERROR] operator precedence not implemented for: ");
@@ -211,6 +230,9 @@ ASTNode* ast_next_operator(Token** tokens) {
         } break;
         case TOKEN_MOD: {
             optor->type = NODE_MOD;
+        } break;
+        case TOKEN_EQUALITY: {
+            optor->type = NODE_EQUALITY;
         } break;
         default: {
             free(optor);
@@ -416,6 +438,12 @@ Result interpret_ast(ASTNode* node) {
             Result result = ast_mod(a, b);
             return result;
         }
+        case NODE_EQUALITY: {
+            Result a = interpret_ast(node->children);
+            Result b = interpret_ast(node->children->next);
+            Result result = ast_equal(a, b);
+            return result;
+        }
         case NODE_FLOAT:
         case NODE_INT: {
             return create_result_from_node(node);
@@ -483,9 +511,9 @@ void print_node(ASTNode* node) {
         case NODE_MOD: {
             printf("NodeModulus");
         } break;
-        default: {
-            printf("UnknownNode");
-        }
+        case NODE_EQUALITY: {
+            printf("NodeEquality");
+        } break;
     }
     if (false && node->token) {
         printf(", Token: ");

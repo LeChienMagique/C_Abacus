@@ -39,6 +39,9 @@ void print_type(int token_type) {
         case TOKEN_MOD: {
             printf("TokenModulus");
         } break;
+        case TOKEN_EQUALITY: {
+            printf("TokenEquality");
+        } break;
         default: {
             printf("UnknownToken");
         }
@@ -62,8 +65,9 @@ bool is_alpha(char c) {
     return is_digit(c) || is_letter(c);
 }
 
-#define OPERATORS_COUNT 6
-const char operators[OPERATORS_COUNT] = {'+', '-', '*', '/', '^', '%'};
+#define OPERATORS_COUNT 7
+// '=' should be "==" but this should work for now
+const char operators[OPERATORS_COUNT] = {'+', '-', '*', '/', '^', '%', '='};
 bool is_operator(char c) {
     for (size_t i = 0; i < OPERATORS_COUNT; i++) {
         if (c == operators[i]) {
@@ -124,6 +128,16 @@ Token* token_next_operator(const char* input, size_t* index) {
         } break;
         case '%': {
             token = create_token(TOKEN_MOD, input + (*index)++, 1);
+        } break;
+        case '=': {
+            char next = input[*index + 1];
+            if (next != '\0' && next == '=') {
+                token = create_token(TOKEN_EQUALITY, input + (*index), 2);
+                *index = *index + 2;
+            } else {
+                // assignement
+                errx(EXIT_FAILURE, "[ERROR] Assignement not implemented");
+            }
         } break;
         default: {
             printf("[ERROR] %c operator not implemented\n", c);
