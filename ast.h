@@ -20,7 +20,6 @@ typedef enum {
     //
     NODE_FUNCTION,
     NODE_EXPR,
-    NODE_TERM,
 } NodeType;
 
 typedef enum {

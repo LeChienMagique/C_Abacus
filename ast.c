@@ -109,7 +109,6 @@ bool ast_is_operator(ASTNode* node) {
         }
         case NODE_FUNCTION:
         case NODE_EXPR:
-        case NODE_TERM:
         case NODE_INT:
         case NODE_FLOAT: {
             return false;
@@ -483,8 +482,7 @@ Result* build_function_arguments(ASTNode* func, int* argc) {
 Result interpret_ast(ASTNode* node) {
     switch (node->type) {
         case NODE_UPLUS:
-        case NODE_EXPR:
-        case NODE_TERM: {
+        case NODE_EXPR: {
             return interpret_ast(node->children);
         }
         case NODE_UMINUS: {
@@ -599,9 +597,6 @@ void print_node(ASTNode* node) {
         } break;
         case NODE_EXPR: {
             printf("NodeExpr");
-        } break;
-        case NODE_TERM: {
-            printf("NodeTerm");
         } break;
         case NODE_MULT: {
             printf("NodeMult");

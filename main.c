@@ -58,9 +58,6 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_EXPR: {
             fprintf(f, "[label=\"Expr\"]\n");
         } break;
-        case NODE_TERM: {
-            fprintf(f, "[label=\"Term\"]\n");
-        } break;
         case NODE_FUNCTION: {
             fprintf(f, "[label=\"Func\"]\n");
         } break;
