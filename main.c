@@ -32,6 +32,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_FLOAT: {
             fprintf(f, "[label=\"%f\"]\n", *((double*) node->value));
         } break;
+        case NODE_SYMBOL: {
+            fprintf(f, "[label=\"%s\"]\n", node->token->value);
+        } break;
         case NODE_MULT: {
             fprintf(f, "[label=\"*\"]\n");
         } break;
@@ -50,6 +53,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         } break;
         case NODE_EQUALITY: {
             fprintf(f, "[label=\"==\"]\n");
+        } break;
+        case NODE_ASSIGN: {
+            fprintf(f, "[label=\"=\"]\n");
         } break;
         case NODE_MINUS:
         case NODE_UMINUS: {

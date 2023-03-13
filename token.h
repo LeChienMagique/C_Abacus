@@ -13,6 +13,7 @@ typedef enum {
     TOKEN_EXP,
     TOKEN_MOD,
     TOKEN_EQUALITY,
+    TOKEN_ASSIGN,
     //
     TOKEN_OPARENTHESIS,
     TOKEN_CPARENTHESIS,

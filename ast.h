@@ -17,12 +17,16 @@ typedef enum {
     NODE_EXP,
     NODE_MOD,
     NODE_EQUALITY,
+    NODE_ASSIGN,
     //
     NODE_FUNCTION,
+    // NODE_VAR,
+    NODE_SYMBOL,
     NODE_EXPR,
 } NodeType;
 
 typedef enum {
+    OP_ASSIGN = 2,
     OP_EQUALITY = 8,
     OP_PLUS = 11,
     OP_MINUS = 11,
@@ -43,7 +47,8 @@ typedef enum {
     AR_MULT = 2,
     AR_EXP = 2,
     AR_MOD = 2,
-    AR_EQUALITY = 2
+    AR_EQUALITY = 2,
+    AR_ASSIGN = 2,
 } OpArity;
 
 

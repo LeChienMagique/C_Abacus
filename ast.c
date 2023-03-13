@@ -21,6 +21,7 @@ ASTNode* ast_next_expr(Token** tokens);
 ASTNode* ast_next_operator(Token** tokens);
 ASTNode* ast_next_operand(Token** tokens);
 ASTNode* ast_next_number(Token** tokens);
+void dump_tokens(Token** tokens);
 
 void advance_tokens(Token** tokens) {
     Token* next = (*tokens)->next;
@@ -104,11 +105,13 @@ bool ast_is_operator(ASTNode* node) {
         case NODE_EXP:
         case NODE_MOD:
         case NODE_EQUALITY:
+        case NODE_ASSIGN:
         case NODE_MULT: {
             return true;
         }
         case NODE_FUNCTION:
         case NODE_EXPR:
+        case NODE_SYMBOL:
         case NODE_INT:
         case NODE_FLOAT: {
             return false;
@@ -139,6 +142,9 @@ OpArity get_operator_arity(ASTNode* optor) {
         }
         case NODE_EQUALITY: {
             return AR_EQUALITY;
+        }
+        case NODE_ASSIGN: {
+            return AR_ASSIGN;
         }
         default: {
             printf("[ERROR] operator arity not implemented for: ");
@@ -177,6 +183,9 @@ OpPrecedence get_operator_precedence(ASTNode* optor) {
         }
         case NODE_UMINUS: {
             return OP_UMINUS;
+        }
+        case NODE_ASSIGN: {
+            return OP_ASSIGN;
         }
         default: {
             printf("[ERROR] operator precedence not implemented for: ");
@@ -221,6 +230,7 @@ ASTNode* ast_next_operand(Token** tokens) {
     //operand = number
     //        | ( expr )
     //        | symbol'(' expr {',' expr} ')'
+    //        | symbol
     if (*tokens == NULL) {
         return NULL;
     }
@@ -236,7 +246,8 @@ ASTNode* ast_next_operand(Token** tokens) {
         ASTNode* symbol = create_node(*tokens, -1);
         advance_tokens(tokens);
 
-        if ((*tokens)->type == TOKEN_OPARENTHESIS) {
+        // function call
+        if (*tokens != NULL && (*tokens)->type == TOKEN_OPARENTHESIS) {
             symbol->type = NODE_FUNCTION;
             advance_tokens(tokens);
 
@@ -262,13 +273,13 @@ ASTNode* ast_next_operand(Token** tokens) {
                 assert(false);
             }
             advance_tokens(tokens);
-        } else {
-            printf("[ERROR] Expected parenthesis followed by expression but got: ");
-            print_token(*tokens);
-            printf("\n");
-            assert(false);
-        }
 
+        }
+        // variable
+        else {
+            symbol->type = NODE_SYMBOL;
+            // advance_tokens(tokens);
+        }
         return symbol;
     }
 
@@ -284,6 +295,8 @@ ASTNode* ast_next_operand(Token** tokens) {
 
     if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
         printf("[ERROR] Mismatched parenthesis\n");
+        dump_tokens(tokens);
+        printf("\n");
         assert(false);
     }
 
@@ -318,6 +331,9 @@ ASTNode* ast_next_operator(Token** tokens) {
         } break;
         case TOKEN_EQUALITY: {
             optor->type = NODE_EQUALITY;
+        } break;
+        case TOKEN_ASSIGN: {
+            optor->type = NODE_ASSIGN;
         } break;
         default: {
             free(optor);
@@ -436,16 +452,21 @@ ASTNode* ast_next_expr(Token** tokens) {
     return expr;
 }
 
+void dump_tokens(Token** tokens) {
+    while (*tokens) {
+        print_token(*tokens);
+        printf(" | ");
+        advance_tokens(tokens);
+    }
+
+}
+
 ASTNode* build_AST(Token** tokens) {
     // note that tokens will be freed during this process
     ASTNode* ast = ast_next_expr(tokens);
     if (*tokens) {
         printf("[ERROR] leftover tokens: ");
-        while (*tokens) {
-            print_token(*tokens);
-            printf(" | ");
-            advance_tokens(tokens);
-        }
+        dump_tokens(tokens);
         printf("\n");
         assert(false);
     }
@@ -478,6 +499,35 @@ Result* build_function_arguments(ASTNode* func, int* argc) {
     return args;
 }
 
+// Variable linked list
+typedef struct Variable {
+    Result value;
+    char* name;
+    struct Variable* next;
+} Variable;
+
+Variable var_sentinel = {0};
+
+Result* get_variable_value(const char* name) {
+    Variable* var;
+    for (var = var_sentinel.next; var; var = var->next) {
+        if (strcmp(var->name, name) == 0) {
+            return &var->value;
+        }
+    }
+    return NULL;
+}
+
+void add_variable(ASTNode* var, Result value) {
+    Variable* last;
+    for (last = &var_sentinel; last->next; last = last->next) { }
+
+    Variable* new_var = calloc(1, sizeof(Variable));
+    new_var->value = value;
+    new_var->name = var->token->value;
+
+    last->next = new_var;
+}
 
 Result interpret_ast(ASTNode* node) {
     switch (node->type) {
@@ -542,6 +592,18 @@ Result interpret_ast(ASTNode* node) {
             free(argv);
             return result;
         }
+        case NODE_SYMBOL: {
+            Result* var_value = get_variable_value(node->token->value);
+            if (var_value != NULL) {
+                return *var_value;
+            }
+            errx(EXIT_FAILURE, "[ERROR] Undeclared variable");
+        }
+        case NODE_ASSIGN: {
+            Result var_value = interpret_ast(node->children->next);
+            add_variable(node->children, var_value);
+            return var_value;
+        }
         default: {
             printf("unimplemented node: ");
             print_node(node);
@@ -571,7 +633,6 @@ void free_AST(ASTNode* root) {
         }
         free(root->token);
     }
-
     free(root);
 }
 
@@ -613,8 +674,14 @@ void print_node(ASTNode* node) {
         case NODE_EQUALITY: {
             printf("NodeEquality");
         } break;
+        case NODE_ASSIGN: {
+            printf("NodeAssign");
+        } break;
         case NODE_FUNCTION: {
             printf("NodeFunction(%s)", node->token->value);
+        } break;
+        case NODE_SYMBOL: {
+            printf("NodeSymbol(%s)", node->token->value);
         } break;
     }
     if (false && node->token) {
