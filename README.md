@@ -11,9 +11,9 @@ This is my first time doing these kind of things with C so the code structure ma
 - Parenthesis
 - Floating point numbers
 - Functions (sqrt, facto, fibo, max, min, isprime, gcd)
+- Implicit multiplication ("5(4) = 20")
 
 ### Not implemented:
-- Implicit multiplication ("5(4) = 20")
 - Variables
 - REPL
 
