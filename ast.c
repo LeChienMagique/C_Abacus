@@ -113,6 +113,7 @@ bool ast_is_operator(ASTNode* node) {
         case NODE_EXPR:
         case NODE_SYMBOL:
         case NODE_INT:
+        case NODE_PROGRAM:
         case NODE_FLOAT: {
             return false;
         }
@@ -278,30 +279,27 @@ ASTNode* ast_next_operand(Token** tokens) {
         // variable
         else {
             symbol->type = NODE_SYMBOL;
-            // advance_tokens(tokens);
         }
         return symbol;
     }
 
-    if ((*tokens)->type != TOKEN_OPARENTHESIS) {
-        printf("[ERROR] Expected parenthesis followed by expression but got: ");
-        print_token(*tokens);
-        printf("\n");
-        assert(false);
+    if ((*tokens)->type == TOKEN_OPARENTHESIS) {
+        advance_tokens(tokens);
+
+        op = ast_next_expr(tokens);
+
+        if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
+            printf("[ERROR] Mismatched parenthesis\n");
+            dump_tokens(tokens);
+            printf("\n");
+            assert(false);
+        }
+
+        advance_tokens(tokens);
+        return op;
     }
-    advance_tokens(tokens);
 
-    op = ast_next_expr(tokens);
-
-    if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
-        printf("[ERROR] Mismatched parenthesis\n");
-        dump_tokens(tokens);
-        printf("\n");
-        assert(false);
-    }
-
-    advance_tokens(tokens);
-    return op;
+    return NULL;
 }
 
 ASTNode* ast_next_operator(Token** tokens) {
@@ -407,11 +405,9 @@ ASTNode* ast_next_expr(Token** tokens) {
     // operand
     ASTNode* operand = ast_next_operand(tokens);
     if (operand == NULL) {
-        printf("Expected operand got: ");
-        print_token(*tokens);
-        printf("\n");
-        assert(false);
+        return NULL;
     }
+
     if (unary) {
         append_child(unary, operand);
         append_child(expr, unary);
@@ -462,14 +458,23 @@ void dump_tokens(Token** tokens) {
 }
 
 ASTNode* build_AST(Token** tokens) {
-    // note that tokens will be freed during this process
-    ASTNode* ast = ast_next_expr(tokens);
+    // node that parenthesis tokens will be freed during this process
+    ASTNode* ast = calloc(1, sizeof(ASTNode));
+    ast->type = NODE_PROGRAM;
+    append_child(ast, ast_next_expr(tokens));
+
+    while (*tokens && (*tokens)->type == TOKEN_SEMICOLON) {
+        advance_tokens(tokens);
+        append_child(ast, ast_next_expr(tokens));
+    }
+
     if (*tokens) {
         printf("[ERROR] leftover tokens: ");
         dump_tokens(tokens);
         printf("\n");
         assert(false);
     }
+
     return ast;
 }
 
@@ -524,13 +529,24 @@ void add_variable(ASTNode* var, Result value) {
 
     Variable* new_var = calloc(1, sizeof(Variable));
     new_var->value = value;
-    new_var->name = var->token->value;
+
+    size_t name_len = strlen(var->token->value);
+    new_var->name = malloc(name_len + 1);
+    new_var->name[name_len] = '\0';
+    memcpy(new_var->name, var->token->value, name_len);
 
     last->next = new_var;
 }
 
 Result interpret_ast(ASTNode* node) {
     switch (node->type) {
+        case NODE_PROGRAM: {
+            ASTNode* expr;
+            for (expr = node->children; expr->next; expr = expr->next) {
+                interpret_ast(expr);
+            }
+            return interpret_ast(expr);
+        }
         case NODE_UPLUS:
         case NODE_EXPR: {
             return interpret_ast(node->children);
@@ -659,6 +675,9 @@ void print_node(ASTNode* node) {
         case NODE_EXPR: {
             printf("NodeExpr");
         } break;
+        case NODE_PROGRAM: {
+            printf("NodeProgram");
+        } break;
         case NODE_MULT: {
             printf("NodeMult");
         } break;
@@ -683,10 +702,6 @@ void print_node(ASTNode* node) {
         case NODE_SYMBOL: {
             printf("NodeSymbol(%s)", node->token->value);
         } break;
-    }
-    if (false && node->token) {
-        printf(", Token: ");
-        print_token(node->token);
     }
 }
 

@@ -35,6 +35,9 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_SYMBOL: {
             fprintf(f, "[label=\"%s\"]\n", node->token->value);
         } break;
+        case NODE_FUNCTION: {
+            fprintf(f, "[label=\"Func(%s)\"]\n", node->token->value);
+        } break;
         case NODE_MULT: {
             fprintf(f, "[label=\"*\"]\n");
         } break;
@@ -64,8 +67,8 @@ void write_node_label(FILE* f, ASTNode* node) {
         case NODE_EXPR: {
             fprintf(f, "[label=\"Expr\"]\n");
         } break;
-        case NODE_FUNCTION: {
-            fprintf(f, "[label=\"Func\"]\n");
+        case NODE_PROGRAM: {
+            fprintf(f, "[label=\"Program\"]\n");
         } break;
     }
 }

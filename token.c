@@ -178,6 +178,8 @@ Token* next_token(const char* input, size_t* index) {
             return token_next_symbol(input, index);
         } else if (c == ',') {
             return create_token(TOKEN_COMMA, input + (*index)++, 1);
+        } else if (c == ';') {
+            return create_token(TOKEN_SEMICOLON, input + (*index)++, 1);
         }
         else {
             printf("[ERROR] unknown token starting with char: %d at index %lu\n", (int) input[*index], *index);

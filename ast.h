@@ -23,6 +23,7 @@ typedef enum {
     // NODE_VAR,
     NODE_SYMBOL,
     NODE_EXPR,
+    NODE_PROGRAM
 } NodeType;
 
 typedef enum {

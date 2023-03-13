@@ -18,7 +18,8 @@ typedef enum {
     TOKEN_OPARENTHESIS,
     TOKEN_CPARENTHESIS,
     TOKEN_SYMBOL,
-    TOKEN_COMMA
+    TOKEN_COMMA,
+    TOKEN_SEMICOLON
 } TokenType;
 
 typedef struct Token {
