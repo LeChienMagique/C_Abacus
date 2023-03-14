@@ -61,7 +61,8 @@ void append_child(ASTNode* node, ASTNode* child) {
 int get_function_arity(ASTNode* func) {
     char* func_name = (char*) func->token->value;
     if (func_name == NULL) {
-        assert(false && "unreachable");
+        fprintf(stderr, "[ERROR] func_name == NULL");
+        exit(1);
     }
 
     if (strcmp(func_name, "sqrt") == 0) {
@@ -86,10 +87,11 @@ int get_function_arity(ASTNode* func) {
         return 2;
     }
     else {
+        // should print to stderr
         printf("[ERROR] Arity not implemented for: ");
         print_node(func);
         printf("\n");
-        assert(false);
+        exit(1);
     }
 
 }
@@ -118,7 +120,8 @@ bool ast_is_operator(ASTNode* node) {
             return false;
         }
     }
-    assert(false && "unreachable");
+    fprintf(stderr, "unreachable");
+    exit(1);
 }
 
 OpArity get_operator_arity(ASTNode* optor) {
@@ -151,7 +154,7 @@ OpArity get_operator_arity(ASTNode* optor) {
             printf("[ERROR] operator arity not implemented for: ");
             print_node(optor);
             printf("\n");
-            assert(false);
+            exit(1);
         }
     }
 }
@@ -192,7 +195,7 @@ OpPrecedence get_operator_precedence(ASTNode* optor) {
             printf("[ERROR] operator precedence not implemented for: ");
             print_node(optor);
             printf("\n");
-            assert(false);
+            exit(1);
         }
     }
 }
@@ -264,14 +267,14 @@ ASTNode* ast_next_operand(Token** tokens) {
                     printf("[ERROR] Expected expression but got: ");
                     print_token(*tokens);
                     printf("\n");
-                    assert(false);
+                    exit(1);
                 }
                 append_child(symbol, expr);
             }
 
             if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
                 printf("[ERROR] Mismatched parenthesis\n");
-                assert(false);
+                exit(1);
             }
             advance_tokens(tokens);
 
@@ -292,7 +295,7 @@ ASTNode* ast_next_operand(Token** tokens) {
             printf("[ERROR] Mismatched parenthesis\n");
             dump_tokens(tokens);
             printf("\n");
-            assert(false);
+            exit(1);
         }
 
         advance_tokens(tokens);
@@ -372,7 +375,7 @@ void ast_add_operator(ASTNode* optor, ASTNode* root) {
         // root->children replace with last operator
         if (get_operator_precedence(root->children) < get_operator_precedence(optor)) {
             ASTNode* before_last_operand = root->children->children;
-            for (unsigned int i = 0; i < (get_operator_arity(root->children) - 2); i++) {
+            for (int i = 0; i < (int) (get_operator_arity(root->children) - 2); i++) {
                 before_last_operand = before_last_operand->next;
             }
             optor->children = before_last_operand->next;
@@ -473,7 +476,7 @@ ASTNode* build_AST(Token** tokens) {
         printf("[ERROR] leftover tokens: ");
         dump_tokens(tokens);
         printf("\n");
-        assert(false);
+        exit(1);
     }
 
     return ast;
@@ -630,7 +633,7 @@ Result interpret_ast(ASTNode* node) {
             printf("unimplemented node: ");
             print_node(node);
             printf("\n");
-            assert(false);
+            exit(1);
         }
     }
 }

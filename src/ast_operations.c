@@ -321,6 +321,8 @@ Result ast_gcd(Result a, Result b) {
 
 
 Result ast_evaluate_function(const char* func_name, int argc, Result* argv) {
+    (void) argc;
+
     if (strcmp(func_name, "sqrt") == 0) {
         return ast_sqrt(argv[0]);
     }
@@ -343,7 +345,7 @@ Result ast_evaluate_function(const char* func_name, int argc, Result* argv) {
         return ast_gcd(argv[0], argv[1]);
     }
     else {
-        assert(false && "unreachable");
+        fprintf(stderr, "[ERROR] Unknown function.");
+        exit(1);
     }
-    assert(argc >= 0); // remove annoying unused parameter warning
 }

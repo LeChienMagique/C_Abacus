@@ -142,8 +142,8 @@ Token* token_next_operator(const char* input, size_t* index) {
             }
         } break;
         default: {
-            printf("[ERROR] %c operator not implemented\n", c);
-            assert(false);
+            fprintf(stderr, "[ERROR] %c operator not implemented\n", c);
+            exit(1);
         }
     }
     return token;
