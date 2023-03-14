@@ -26,3 +26,8 @@ Options:
     --graph  Generate AST graph
     --debug  Prints debug information
 ```
+
+### Build
+`make` should the trick.
+
+I guess this is buildable on any Linux system (idk much about compatibility and portability)

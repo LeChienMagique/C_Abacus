@@ -4,11 +4,13 @@ LDFLAGS=
 LDLIBS=-lm
 
 SRC = main.c ./src/token.c ./src/ast.c ./src/test.c ./src/ast_operations.c
+
 all: main
 
-main: ${SRC}
+main:
+	${CC} ${CFLAGS} ${SRC} ${LDLIBS} -o abacus
 
 .PHONY: clean
 
 clean:
-	${RM} main
+	${RM} abacus
