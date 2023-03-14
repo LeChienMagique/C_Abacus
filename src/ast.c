@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <err.h>
+#include <errno.h>
 #include <assert.h>
 #include <string.h>
 #include "./ast.h"
@@ -439,7 +439,8 @@ ASTNode* ast_next_expr(Token** tokens) {
         append_child(optor, operand);
 
         if ((*tokens)->type != TOKEN_CPARENTHESIS) {
-            errx(EXIT_FAILURE, "Mismatched parenthesis");
+            fprintf(stderr, "Mismatched parenthesis");
+            exit(1);
         }
         advance_tokens(tokens);
 
@@ -613,11 +614,13 @@ Result interpret_ast(ASTNode* node) {
             if (var_value != NULL) {
                 return *var_value;
             }
-            errx(EXIT_FAILURE, "[ERROR] Undeclared variable");
+            fprintf(stderr, "[ERROR] Undeclared variable");
+            exit(1);
         }
         case NODE_ASSIGN: {
             if (node->children->type != NODE_SYMBOL) {
-                errx(EXIT_FAILURE, "[ERROR] Cannot assign value to a literal");
+                fprintf(stderr, "[ERROR] Cannot assign value to a literal");
+                exit(1);
             }
             Result var_value = interpret_ast(node->children->next);
             add_variable(node->children, var_value);

@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <dirent.h>
 #include <string.h>
-#include <err.h>
+#include <errno.h>
 
 #include "./ast.h"
 #include "./token.h"
@@ -28,7 +28,8 @@ static Result evaluate_input(char* input) {
 char* read_file(const char* filepath) {
     FILE* f = fopen(filepath, "r");
     if (f == NULL) {
-        err(1, "Could not open file %s: ", filepath);
+        fprintf(stderr, "Could not open file %s: %s", filepath, strerror(errno));
+        exit(1);
     }
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
@@ -56,6 +57,10 @@ void save_test(const char* filepath, const char* filename, const char* dirpath) 
     strcat(results_path, filename);
     strcat(results_path, "_output");
     FILE* results = fopen(results_path, "w+");
+    if (results == NULL) {
+        fprintf(stderr, "Could not open file %s: %s", results_path, strerror(errno));
+        exit(1);
+    }
 
     char* inputs = read_file(filepath);
     String_View sv_inputs = sv_from_cstr(inputs);

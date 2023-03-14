@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
-#include <err.h>
 
 #include "./token.h"
 

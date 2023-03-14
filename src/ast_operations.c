@@ -1,7 +1,6 @@
 #include "./ast_operations.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <err.h>
 #include <math.h>
 #include <string.h>
 #include <assert.h>
@@ -27,7 +26,8 @@ Result create_result_from_node(ASTNode* node) {
         result.type = RESULT_FLOAT;
         result.valf = *((double*) node->value);
     } else {
-        errx(EXIT_FAILURE, "Unknown value type");
+        fprintf(stderr, "unreachable");
+        exit(1);
     }
     return result;
 }
@@ -85,10 +85,12 @@ double divf(double a, double b) { return a / b; }
 Result ast_div(Result a, Result b) {
     if (b.type == RESULT_FLOAT) {
         if (b.valf == 0) {
-            errx(EXIT_FAILURE, "Division by zero");
+            fprintf(stderr, "Division by zero");
+            exit(1);
         }
     } else if (b.vali == 0) {
-        errx(EXIT_FAILURE, "Division by zero");
+        fprintf(stderr, "Division by zero");
+        exit(1);
     }
     return ast_do_binop(a, b, divi, divf);
 }
@@ -98,24 +100,28 @@ Result ast_exp(Result a, Result b) {
     if (a.type == RESULT_FLOAT) {
         if (b.type == RESULT_FLOAT) {
             if (a.valf == 0 && b.valf < 0) {
-                errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+                fprintf(stderr, "[ERROR] Cannot take 0 to a negative power");
+                exit(1);
             }
             result.valf = pow(a.valf, b.valf);
         } else {
             if (a.valf == 0 && b.vali < 0) {
-                errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+                fprintf(stderr, "[ERROR] Cannot take 0 to a negative power");
+                exit(1);
             }
             result.valf = pow(a.valf, b.vali);
         }
     } else if (b.type == RESULT_FLOAT) {
         if (a.vali == 0 && b.valf < 0) {
-            errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+            fprintf(stderr, "[ERROR] Cannot take 0 to a negative power");
+            exit(1);
         }
 
         result.valf = pow((double) a.vali, b.valf);
     } else {
         if (a.vali == 0 && b.vali < 0) {
-            errx(EXIT_FAILURE, "[ERROR] Cannot take 0 to a negative power");
+            fprintf(stderr, "[ERROR] Cannot take 0 to a negative power");
+            exit(1);
         }
 
         result.vali = (int) pow(a.vali, b.vali);
@@ -169,7 +175,8 @@ Result ast_sqrt(Result x) {
     }
 
     if (x_val < 0) {
-        errx(EXIT_FAILURE, "[ERROR] Domain error, sqrt(x) where x < 0");
+        fprintf(stderr, "[ERROR] Domain error, sqrt(x) where x < 0");
+        exit(1);
     }
 
     result.valf = sqrt(x_val);
@@ -187,14 +194,16 @@ Result ast_facto(Result x) {
     Result result = {0};
     if (x.type == RESULT_INT) {
         if (x.vali < 0) {
-            errx(EXIT_FAILURE, "[ERROR] Domain error, facto(x) where x < 0");
+            fprintf(stderr, "[ERROR] Domain error, facto(x) where x < 0");
+            exit(1);
         }
         result.type = RESULT_INT;
         result.vali = facti(x.vali);
 
     } else {
         if (x.valf < -1) {
-            errx(EXIT_FAILURE, "[ERROR] Domain error, facto(x) where x < 0");
+            fprintf(stderr, "[ERROR] Domain error, facto(x) where x < 0");
+            exit(1);
         }
         result.type = RESULT_FLOAT;
         result.valf = tgamma(x.valf + 1);
@@ -223,7 +232,8 @@ Result ast_fibo(Result n) {
     }
 
     if (n_val < 0) {
-        errx(EXIT_FAILURE, "[ERROR] Domain error fibo(n) where n < 0");
+        fprintf(stderr, "[ERROR] Domain error fibo(n) where n < 0");
+        exit(1);
     }
 
     result.vali = fibo(n_val);

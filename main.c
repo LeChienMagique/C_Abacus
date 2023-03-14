@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <err.h>
+#include <errno.h>
 #include <assert.h>
 #include <stdbool.h>
 
@@ -97,7 +97,8 @@ int _generate_dot(FILE* f, ASTNode* node, int parent, int nextid) {
 void generate_dot(ASTNode* ast) {
     FILE* fp = fopen("graph.dot", "w+");
     if (fp == NULL) {
-        err(1, "Could not open file 'graph.dot': ");
+        fprintf(stderr, "Could not open file 'graph.dot': %s", strerror(errno));
+        exit(1);
     }
     fprintf(fp, "graph {\n");
     _generate_dot(fp, ast, -1, 0);
