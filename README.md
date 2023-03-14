@@ -1,5 +1,3 @@
-# CURRENTLY IN DEVELOPMENT
-
 ## Abacus in C
 This project is a porting in C of my other Abacus project written in C#.
 I originally wanted to try to make an AST using a recursive-descent parser in C and I thought it would be a good idea to also port Abacus to C.
