@@ -12,7 +12,6 @@
 int GENERATE_GRAPH = 0;
 int DEBUG_MODE = 0;
 
-
 void print_usage() {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  ./main <input> [options] : run input\n");
@@ -135,24 +134,62 @@ Result evaluate_input(char* input) {
 
     Result result = interpret_ast(ast);
 
+    // tokens are actually freed during free_AST
     free_AST(ast);
-    // tokens are actually freed during ast build
     free(sentinel);
     return result;
 }
-
 
 void run(char* input) {
     Result result = evaluate_input(input);
 
     if (result.type == RESULT_INT) {
-        printf("%s = %d\n", input, result.vali);
+        // printf("%s = %d\n", input, result.vali);
+        printf("%d\n", result.vali);
     } else {
-        printf("%s = %f\n", input,  result.valf);
+        // printf("%s = %f\n", input,  result.valf);
+        printf("%f\n", result.valf);
     }
 }
 
+void repl_mode() {
+    char input[1024]; // should be enough
+    bool quit = false;
+
+    while (!quit) {
+        printf(">>> ");
+        if (fgets(input, 1024, stdin)) {
+            if (strcmp(input, "exit") == 0) {
+                quit = true;
+                break;
+            }
+
+            int len = strlen(input);
+            if (len > 0) {
+                if (len - 1 == 0) {
+                    continue;
+                }
+                if (input[len - 1] < 40) {
+                    input[len - 1] = '\0';
+                }
+            }
+
+            Result result = evaluate_input(input);
+            if (result.type == RESULT_INT) {
+                printf("> %d\n", result.vali);
+            } else {
+                printf("> %f\n", result.valf);
+            }
+        }
+    }
+}
+
+
 int main(int argc, char** argv) {
+    // TODO: REPL mode
+    // TODO: ideas:
+    //       - add some math functions
+    // TODO: beautify debug graph
     // TODO: use automaton to tokenize
     /*
     Usage:
@@ -183,7 +220,10 @@ int main(int argc, char** argv) {
                 print_usage();
             }
         }
-
+        else if (strcmp(argv[1], "--repl") == 0) {
+            repl_mode();
+            exit(0);
+        }
         // run user input
         else {
             char* input = argv[1];

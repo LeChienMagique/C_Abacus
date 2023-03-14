@@ -616,6 +616,9 @@ Result interpret_ast(ASTNode* node) {
             errx(EXIT_FAILURE, "[ERROR] Undeclared variable");
         }
         case NODE_ASSIGN: {
+            if (node->children->type != NODE_SYMBOL) {
+                errx(EXIT_FAILURE, "[ERROR] Cannot assign value to a literal");
+            }
             Result var_value = interpret_ast(node->children->next);
             add_variable(node->children, var_value);
             return var_value;
