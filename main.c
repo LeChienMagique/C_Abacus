@@ -5,21 +5,22 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include "./token.h"
-#include "./ast.h"
-#include "./test.h"
+#include "./src/token.h"
+#include "./src/ast.h"
+#include "./src/test.h"
 
 int GENERATE_GRAPH = 0;
 int DEBUG_MODE = 0;
 
 void print_usage() {
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  ./main <input> [options] : run input\n");
-    fprintf(stderr, "  ./main test run [options] : run tests\n");
-    fprintf(stderr, "  ./main test save : save expected results\n");
+    fprintf(stderr, "  ./main <input> [options]          Run input\n");
+    fprintf(stderr, "  ./main --repl                     Run in REPL mode\n");
+    fprintf(stderr, "  ./main test run                   Run tests\n");
+    fprintf(stderr, "  ./main test save                  Save expected results\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  --debug               Print debug informations\n");
-    fprintf(stderr, "  --graph               Generate AST graph\n");
+    fprintf(stderr, "  --debug                           Print debug informations\n");
+    fprintf(stderr, "  --graph                           Generate AST graph\n");
     exit(1);
 }
 
@@ -169,6 +170,8 @@ void repl_mode() {
                 if (len - 1 == 0) {
                     continue;
                 }
+
+                // not sure if this is portable
                 if (input[len - 1] < 40) {
                     input[len - 1] = '\0';
                 }

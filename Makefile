@@ -3,13 +3,12 @@ CFLAGS=-Wall -Wextra -g -std=c11 -pedantic
 LDFLAGS=
 LDLIBS=-lm
 
-main: main.c token.c ast.c test.c ast_operations.c
+SRC = main.c ./src/token.c ./src/ast.c ./src/test.c ./src/ast_operations.c
+all: main
 
-main.c:
-ast.c:
-token.c:
-test.c:
-ast_operations.c:
+main: ${SRC}
+
+.PHONY: clean
 
 clean:
 	${RM} main
