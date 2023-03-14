@@ -14,9 +14,9 @@ This is my first time doing these kind of things with C so the code structure ma
 - Implicit multiplication ("5(4) = 20")
 - Variables
 - Multiple expressions ("a = sqrt(81); 2 * a" => 18)
+- REPL
 
 ### Not implemented:
-- REPL
 
 ### Usage:
 ```
