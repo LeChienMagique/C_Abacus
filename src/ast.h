@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 typedef enum {
-    NODE_INT,
+    NODE_INT = 0,
     NODE_FLOAT,
     // unary operators
     NODE_UPLUS,
@@ -20,10 +20,10 @@ typedef enum {
     NODE_ASSIGN,
     //
     NODE_FUNCTION,
-    // NODE_VAR,
     NODE_SYMBOL,
     NODE_EXPR,
-    NODE_PROGRAM
+    NODE_PROGRAM,
+    NODE_COUNT
 } NodeType;
 
 typedef enum {
@@ -54,8 +54,6 @@ typedef enum {
 
 
 typedef struct ASTNode {
-    // TODO: remove token field as tokens get freed during ast building
-    //       Or don't free tokens during ast building
     Token* token;
     void* value;
     NodeType type;
@@ -73,6 +71,10 @@ typedef struct {
     int vali;
     double valf;
 } Result;
+
+
+
+
 
 // ASTNode* ast_next_expr(Token** tokens);
 // ASTNode* ast_next_operator(Token** tokens);

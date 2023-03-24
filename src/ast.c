@@ -6,8 +6,45 @@
 #include <string.h>
 #include "./ast.h"
 #include "./ast_operations.h"
+
+const OpPrecedence OPERATOR_PRECEDENCE[NODE_COUNT + 1] = {-1, -1, OP_UPLUS, OP_UMINUS, OP_PLUS, OP_MINUS, OP_DIV, OP_MULT, OP_EXP, OP_MOD, OP_EQUALITY, OP_ASSIGN, -1, -1, -1, -1, -1};
+
+const bool IS_OPERATOR[NODE_COUNT + 1] = {false, false, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false};
+
+const char* NODE_NAMES[NODE_COUNT + 1] = {"NodeInt", "NodeFloat", "NodeUplus", "NodeUminus", "NodePlus", "NodeMinus", "NodeDiv", "NodeMult", "NodeExp", "NodeMod", "NodeEquality", "NodeAssign", "NodeFunction", "NodeSymbol", "NodeExpr", "NodeProgram", "!NodeCount!"};
+
+const NodeType NODE_TYPES[TOKEN_COUNT + 1] = {
+    NODE_INT, NODE_FLOAT, NODE_PLUS, NODE_MINUS, NODE_MULT, NODE_DIV, NODE_EXP, NODE_MOD, NODE_EQUALITY, NODE_ASSIGN, NODE_COUNT, NODE_COUNT, NODE_SYMBOL, NODE_COUNT, NODE_COUNT, NODE_COUNT
+};
+
+const OpArity OPERATOR_ARITY[NODE_COUNT + 1] = {-1, -1, AR_UMINUS, AR_UPLUS, AR_PLUS, AR_MINUS, AR_DIV, AR_MULT, AR_EXP, AR_MOD, AR_EQUALITY, AR_ASSIGN, -1, -1, -1, -1, -1};
+
+// Function linked list
+typedef struct Function {
+    char* name;
+    int arity;
+    struct EvalScope* scope;
+    struct Function* next;
+} Function;
+
+// Variable linked list
+typedef struct Variable {
+    Result value;
+    char* name;
+    struct Variable* next;
+} Variable;
+
+
+typedef struct EvalScope {
+    Variable* variables;
+    Function* functions;
+    struct EvalScope* parent;
+} EvalScope;
+
 /*
-program = expr
+program = funcdef | expr
+
+funcdef = 'def' name '(' arg {, arg} ')' = exprb
 
 expr = [unary] operand {operator operand}
 
@@ -57,6 +94,17 @@ void append_child(ASTNode* node, ASTNode* child) {
     last_child->next = child;
 }
 
+#define BUILTIN_FUNC_COUNT 7
+const char* BUILTIN_FUNCS[BUILTIN_FUNC_COUNT] = {"sqrt", "facto", "fibo", "min", "max", "isprime", "gcd"};
+bool is_builtin_function(const char* func_name) {
+    for (int i = 0; i < BUILTIN_FUNC_COUNT; i++) {
+        if (strcmp(BUILTIN_FUNCS[i], func_name) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 int get_function_arity(ASTNode* func) {
     char* func_name = (char*) func->token->value;
@@ -96,108 +144,30 @@ int get_function_arity(ASTNode* func) {
 
 }
 
-
 bool ast_is_operator(ASTNode* node) {
-    switch (node->type) {
-        case NODE_UMINUS:
-        case NODE_UPLUS:
-        case NODE_MINUS:
-        case NODE_PLUS:
-        case NODE_DIV:
-        case NODE_EXP:
-        case NODE_MOD:
-        case NODE_EQUALITY:
-        case NODE_ASSIGN:
-        case NODE_MULT: {
-            return true;
-        }
-        case NODE_FUNCTION:
-        case NODE_EXPR:
-        case NODE_SYMBOL:
-        case NODE_INT:
-        case NODE_PROGRAM:
-        case NODE_FLOAT: {
-            return false;
-        }
-    }
-    fprintf(stderr, "unreachable");
-    exit(1);
+    return IS_OPERATOR[node->type];
 }
 
 OpArity get_operator_arity(ASTNode* optor) {
-    switch (optor->type) {
-        case NODE_MINUS: {
-            return AR_MINUS;
-        }
-        case NODE_PLUS: {
-            return AR_PLUS;
-        }
-        case NODE_MULT: {
-            return AR_MULT;
-        }
-        case NODE_DIV: {
-            return AR_DIV;
-        }
-        case NODE_EXP: {
-            return AR_EXP;
-        }
-        case NODE_MOD: {
-            return AR_MOD;
-        }
-        case NODE_EQUALITY: {
-            return AR_EQUALITY;
-        }
-        case NODE_ASSIGN: {
-            return AR_ASSIGN;
-        }
-        default: {
-            printf("[ERROR] operator arity not implemented for: ");
-            print_node(optor);
-            printf("\n");
-            exit(1);
-        }
+    OpArity ar = OPERATOR_ARITY[optor->type];
+    if ((int) ar == -1) {
+        printf("[ERROR] Operator arity not implemented for: ");
+        print_node(optor);
+        printf("\n");
+        exit(1);
     }
+    return ar;
 }
 
 OpPrecedence get_operator_precedence(ASTNode* optor) {
-    switch (optor->type) {
-        case NODE_MINUS: {
-            return OP_MINUS;
-        }
-        case NODE_PLUS: {
-            return OP_PLUS;
-        }
-        case NODE_MULT: {
-            return OP_MULT;
-        }
-        case NODE_DIV: {
-            return OP_DIV;
-        }
-        case NODE_MOD: {
-            return OP_MOD;
-        }
-        case NODE_EXP: {
-            return OP_EXP;
-        }
-        case NODE_EQUALITY: {
-            return OP_EQUALITY;
-        }
-        case NODE_UPLUS: {
-            return OP_PLUS;
-        }
-        case NODE_UMINUS: {
-            return OP_UMINUS;
-        }
-        case NODE_ASSIGN: {
-            return OP_ASSIGN;
-        }
-        default: {
-            printf("[ERROR] operator precedence not implemented for: ");
-            print_node(optor);
-            printf("\n");
-            exit(1);
-        }
+    OpPrecedence prec = OPERATOR_PRECEDENCE[optor->type];
+    if ((int) prec == -1) {
+        printf("[ERROR] Operator precedence not implemented for: ");
+        print_node(optor);
+        printf("\n");
+        exit(1);
     }
+    return prec;
 }
 
 ASTNode* ast_next_number(Token** tokens) {
@@ -207,22 +177,24 @@ ASTNode* ast_next_number(Token** tokens) {
 
     ASTNode* number = create_node(*tokens, -1);
     switch ((*tokens)->type) {
-        case TOKEN_INT: {
-            number->type = NODE_INT;
-            int* value = malloc(sizeof(int));
-            *value = atoi(number->token->value);
-            number->value = (void*) value;
-        } break;
-        case TOKEN_FLOAT: {
-            number->type = NODE_FLOAT;
-            double* value = malloc(sizeof(double));
-            *value = atof(number->token->value);
-            number->value = (void*) value;
-        } break;
-        default: {
-            free(number);
-            return NULL;
-        }
+    case TOKEN_INT: {
+        number->type = NODE_INT;
+        int* value = malloc(sizeof(int));
+        *value = atoi(number->token->value);
+        number->value = (void*) value;
+    }
+    break;
+    case TOKEN_FLOAT: {
+        number->type = NODE_FLOAT;
+        double* value = malloc(sizeof(double));
+        *value = atof(number->token->value);
+        number->value = (void*) value;
+    }
+    break;
+    default: {
+        free(number);
+        return NULL;
+    }
     }
 
     advance_tokens(tokens);
@@ -252,28 +224,31 @@ ASTNode* ast_next_operand(Token** tokens) {
 
         // function call
         if (*tokens != NULL && (*tokens)->type == TOKEN_OPARENTHESIS) {
-            symbol->type = NODE_FUNCTION;
             advance_tokens(tokens);
+            symbol->type = NODE_FUNCTION;
 
-            ASTNode* expr = ast_next_expr(tokens);
-            if (expr) {
-                append_child(symbol, expr);
-            }
-
-            while (*tokens != NULL && (*tokens)->type == TOKEN_COMMA) {
-                advance_tokens(tokens);
+            int arity = get_function_arity(symbol);
+            ASTNode* expr;
+            for (int i = 0; i < arity; i++) {
                 expr = ast_next_expr(tokens);
                 if (expr == NULL) {
-                    printf("[ERROR] Expected expression but got: ");
-                    print_token(*tokens);
-                    printf("\n");
+                    fprintf(stderr, "[ERROR] %s function accepts %d arguments, but only got %d.\n",
+                            symbol->token->value, arity, i);
                     exit(1);
                 }
                 append_child(symbol, expr);
+
+                if (i != arity - 1) {
+                    if ((*tokens)->type != TOKEN_COMMA) {
+                        fprintf(stderr, "[ERROR] Expected comma after expression.");
+                        exit(1);
+                    }
+                    advance_tokens(tokens); // skip comma
+                }
             }
 
             if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
-                printf("[ERROR] Mismatched parenthesis\n");
+                fprintf(stderr, "[ERROR] Mismatched parenthesis\n");
                 exit(1);
             }
             advance_tokens(tokens);
@@ -305,42 +280,22 @@ ASTNode* ast_next_operand(Token** tokens) {
     return NULL;
 }
 
+
+
+
+
 ASTNode* ast_next_operator(Token** tokens) {
     if (*tokens == NULL) {
         return NULL;
     }
 
-    ASTNode* optor = create_node(*tokens, -1);
-    switch ((*tokens)->type) {
-        case TOKEN_PLUS: {
-            optor->type = NODE_PLUS;
-        } break;
-        case TOKEN_MINUS: {
-            optor->type = NODE_MINUS;
-        } break;
-        case TOKEN_MULT: {
-            optor->type = NODE_MULT;
-        } break;
-        case TOKEN_DIV: {
-            optor->type = NODE_DIV;
-        } break;
-        case TOKEN_EXP: {
-            optor->type = NODE_EXP;
-        } break;
-        case TOKEN_MOD: {
-            optor->type = NODE_MOD;
-        } break;
-        case TOKEN_EQUALITY: {
-            optor->type = NODE_EQUALITY;
-        } break;
-        case TOKEN_ASSIGN: {
-            optor->type = NODE_ASSIGN;
-        } break;
-        default: {
-            free(optor);
-            return NULL;
-        }
+    NodeType node_type = NODE_TYPES[(*tokens)->type];
+    if (!IS_OPERATOR[node_type]) {
+        return NULL;
     }
+
+    ASTNode* optor = create_node(*tokens, node_type);
+
     size_t token_len = strlen((char*) (*tokens)->value);
     void* value = calloc(token_len + 1, sizeof(char));
     memcpy(value, (*tokens)->value, token_len);
@@ -352,15 +307,17 @@ ASTNode* ast_next_operator(Token** tokens) {
 ASTNode* ast_next_unary(Token** tokens) {
     ASTNode* unary;
     switch ((*tokens)->type) {
-        case TOKEN_PLUS: {
-            unary = create_node(*tokens, NODE_UPLUS);
-        } break;
-        case TOKEN_MINUS: {
-            unary = create_node(*tokens, NODE_UMINUS);
-        } break;
-        default: {
-            return NULL;
-        }
+    case TOKEN_PLUS: {
+        unary = create_node(*tokens, NODE_UPLUS);
+    }
+    break;
+    case TOKEN_MINUS: {
+        unary = create_node(*tokens, NODE_UMINUS);
+    }
+    break;
+    default: {
+        return NULL;
+    }
     }
     size_t token_len = strlen((char*) (*tokens)->value);
     void* value = calloc(token_len + 1, sizeof(char));
@@ -482,6 +439,7 @@ ASTNode* build_AST(Token** tokens) {
     return ast;
 }
 
+
 Result* build_function_arguments(ASTNode* func, int* argc) {
     int arity = get_function_arity(func);
 
@@ -508,18 +466,9 @@ Result* build_function_arguments(ASTNode* func, int* argc) {
     return args;
 }
 
-// Variable linked list
-typedef struct Variable {
-    Result value;
-    char* name;
-    struct Variable* next;
-} Variable;
-
-Variable var_sentinel = {0};
-
-Result* get_variable_value(const char* name) {
-    Variable* var;
-    for (var = var_sentinel.next; var; var = var->next) {
+Result* get_variable_value(EvalScope* scope, const char* name) {
+    Variable* var = scope->variables;
+    for (var = var->next; var; var = var->next) {
         if (strcmp(var->name, name) == 0) {
             return &var->value;
         }
@@ -527,9 +476,9 @@ Result* get_variable_value(const char* name) {
     return NULL;
 }
 
-void add_variable(ASTNode* var, Result value) {
+void add_variable(EvalScope* scope, ASTNode* var, Result value) {
     Variable* last;
-    for (last = &var_sentinel; last->next; last = last->next) { }
+    for (last = scope->variables; last->next; last = last->next) { }
 
     Variable* new_var = calloc(1, sizeof(Variable));
     new_var->value = value;
@@ -542,99 +491,132 @@ void add_variable(ASTNode* var, Result value) {
     last->next = new_var;
 }
 
+Function* add_function(EvalScope* scope, const char* name, int arity) {
+    Function* last;
+    for (last = scope->functions; last->next; last = last->next) { }
+
+    Function* new_func = calloc(1, sizeof(Function));
+
+    size_t name_len = strlen(name);
+    new_func->name = malloc(name_len + 1);
+    new_func->name[name_len] = '\0';
+    memcpy(new_func->name, name, name_len);
+
+    new_func->arity = arity;
+    new_func->scope = calloc(1, sizeof(EvalScope));
+    new_func->scope->variables = calloc(1, sizeof(Variable));
+
+    last->next = new_func;
+    return new_func;
+}
+
+Result _interpret_ast(EvalScope* scope, ASTNode* node);
+
 Result interpret_ast(ASTNode* node) {
+    EvalScope* top_scope = calloc(1, sizeof(EvalScope));
+    top_scope->functions = calloc(1, sizeof(Function));
+    top_scope->variables = calloc(1, sizeof(Variable));
+
+    return _interpret_ast(top_scope, node);
+}
+
+Result _interpret_ast(EvalScope* scope, ASTNode* node) {
     switch (node->type) {
-        case NODE_PROGRAM: {
-            ASTNode* expr;
-            for (expr = node->children; expr->next; expr = expr->next) {
-                interpret_ast(expr);
-            }
-            return interpret_ast(expr);
+    case NODE_PROGRAM: {
+        ASTNode* expr;
+        for (expr = node->children; expr->next; expr = expr->next) {
+            _interpret_ast(scope, expr);
         }
-        case NODE_UPLUS:
-        case NODE_EXPR: {
-            return interpret_ast(node->children);
+        return _interpret_ast(scope, expr);
+    }
+    case NODE_UPLUS:
+    case NODE_EXPR: {
+        return _interpret_ast(scope, node->children);
+    }
+    case NODE_UMINUS: {
+        return ast_neg(_interpret_ast(scope, node->children));
+    }
+    case NODE_PLUS: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_add(a, b);
+        return result;
+    }
+    case NODE_MINUS: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_sub(a, b);
+        return result;
+    }
+    case NODE_MULT: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_mul(a, b);
+        return result;
+    }
+    case NODE_DIV: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_div(a, b);
+        return result;
+    }
+    case NODE_EXP: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_exp(a, b);
+        return result;
+    }
+    case NODE_MOD: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_mod(a, b);
+        return result;
+    }
+    case NODE_EQUALITY: {
+        Result a = _interpret_ast(scope, node->children);
+        Result b = _interpret_ast(scope, node->children->next);
+        Result result = ast_equal(a, b);
+        return result;
+    }
+    case NODE_FLOAT:
+    case NODE_INT: {
+        return create_result_from_node(node);
+    }
+    case NODE_FUNCTION: {
+        if (!is_builtin_function(node->token->value)) {
+            fprintf(stderr, "func name: '%s'\n", node->token->value);
+            exit(20);
         }
-        case NODE_UMINUS: {
-            return ast_neg(interpret_ast(node->children));
+        int argc;
+        Result* argv = build_function_arguments(node, &argc);
+        assert(node->token != NULL);
+        Result result = ast_evaluate_function(node->token->value, argc, argv);
+        free(argv);
+        return result;
+    }
+    case NODE_SYMBOL: {
+        Result* var_value = get_variable_value(scope, node->token->value);
+        if (var_value != NULL) {
+            return *var_value;
         }
-        case NODE_PLUS: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_add(a, b);
-            return result;
-        }
-        case NODE_MINUS: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_sub(a, b);
-            return result;
-        }
-        case NODE_MULT: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_mul(a, b);
-            return result;
-        }
-        case NODE_DIV: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_div(a, b);
-            return result;
-        }
-        case NODE_EXP: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_exp(a, b);
-            return result;
-        }
-        case NODE_MOD: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_mod(a, b);
-            return result;
-        }
-        case NODE_EQUALITY: {
-            Result a = interpret_ast(node->children);
-            Result b = interpret_ast(node->children->next);
-            Result result = ast_equal(a, b);
-            return result;
-        }
-        case NODE_FLOAT:
-        case NODE_INT: {
-            return create_result_from_node(node);
-        }
-        case NODE_FUNCTION: {
-            int argc;
-            Result* argv = build_function_arguments(node, &argc);
-            assert(node->token != NULL);
-            Result result = ast_evaluate_function(node->token->value, argc, argv);
-            free(argv);
-            return result;
-        }
-        case NODE_SYMBOL: {
-            Result* var_value = get_variable_value(node->token->value);
-            if (var_value != NULL) {
-                return *var_value;
-            }
-            fprintf(stderr, "[ERROR] Undeclared variable");
+        fprintf(stderr, "[ERROR] Undeclared function");
+        exit(1);
+    }
+    case NODE_ASSIGN: {
+        if (node->children->type != NODE_SYMBOL) {
+            fprintf(stderr, "[ERROR] Cannot assign value to a literal");
             exit(1);
         }
-        case NODE_ASSIGN: {
-            if (node->children->type != NODE_SYMBOL) {
-                fprintf(stderr, "[ERROR] Cannot assign value to a literal");
-                exit(1);
-            }
-            Result var_value = interpret_ast(node->children->next);
-            add_variable(node->children, var_value);
-            return var_value;
-        }
-        default: {
-            printf("unimplemented node: ");
-            print_node(node);
-            printf("\n");
-            exit(1);
-        }
+        Result var_value = _interpret_ast(scope, node->children->next);
+        add_variable(scope, node->children, var_value);
+        return var_value;
+    }
+    default: {
+        printf("unimplemented node: ");
+        print_node(node);
+        printf("\n");
+        exit(1);
+    }
     }
 }
 
@@ -662,55 +644,27 @@ void free_AST(ASTNode* root) {
 }
 
 void print_node(ASTNode* node) {
+    const char* node_name = NODE_NAMES[node->type];
     switch (node->type) {
-        case NODE_INT: {
-            printf("NodeInt(%d)", *((int*) node->value));
-        } break;
-        case NODE_FLOAT: {
-            printf("NodeFloat(%f)", *((double*) node->value));
-        } break;
-        case NODE_PLUS: {
-            printf("NodePlus");
-        } break;
-        case NODE_MINUS: {
-            printf("NodeMinus");
-        } break;
-        case NODE_UPLUS: {
-            printf("NodeUnaryPlus");
-        } break;
-        case NODE_UMINUS: {
-            printf("NodeUnaryMinus");
-        } break;
-        case NODE_EXPR: {
-            printf("NodeExpr");
-        } break;
-        case NODE_PROGRAM: {
-            printf("NodeProgram");
-        } break;
-        case NODE_MULT: {
-            printf("NodeMult");
-        } break;
-        case NODE_DIV: {
-            printf("NodeDiv");
-        } break;
-        case NODE_EXP: {
-            printf("NodeExponent");
-        } break;
-        case NODE_MOD: {
-            printf("NodeModulus");
-        } break;
-        case NODE_EQUALITY: {
-            printf("NodeEquality");
-        } break;
-        case NODE_ASSIGN: {
-            printf("NodeAssign");
-        } break;
-        case NODE_FUNCTION: {
-            printf("NodeFunction(%s)", node->token->value);
-        } break;
-        case NODE_SYMBOL: {
-            printf("NodeSymbol(%s)", node->token->value);
-        } break;
+    case NODE_INT: {
+        printf("%s(%d)", node_name, *((int*) node->value));
+    }
+    break;
+    case NODE_FLOAT: {
+        printf("%s(%f)", node_name, *((double*) node->value));
+    }
+    break;
+    case NODE_FUNCTION: {
+        printf("%s(%s)", node_name, node->token->value);
+    }
+    break;
+    case NODE_SYMBOL: {
+        printf("%s(%s)", node_name, node->token->value);
+    }
+    break;
+    default: {
+        printf("%s", node_name);
+    }
     }
 }
 

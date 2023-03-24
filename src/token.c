@@ -8,45 +8,58 @@
 
 void print_type(int token_type) {
     switch (token_type) {
-        case TOKEN_INT: {
-            printf("TokenInt");
-        } break;
-        case TOKEN_FLOAT: {
-            printf("TokenFloat");
-        } break;
-        case TOKEN_PLUS: {
-            printf("TokenPlus");
-        } break;
-        case TOKEN_MINUS: {
-            printf("TokenMinus");
-        } break;
-        case TOKEN_OPARENTHESIS: {
-            printf("TokenOpenParenthesis");
-        } break;
-        case TOKEN_CPARENTHESIS: {
-            printf("TokenCloseParenthesis");
-        } break;
-        case TOKEN_MULT: {
-            printf("TokenMult");
-        } break;
-        case TOKEN_DIV: {
-            printf("TokenDiv");
-        } break;
-        case TOKEN_EXP: {
-            printf("TokenExponent");
-        } break;
-        case TOKEN_MOD: {
-            printf("TokenModulus");
-        } break;
-        case TOKEN_EQUALITY: {
-            printf("TokenEquality");
-        } break;
-        case TOKEN_ASSIGN: {
-            printf("TokenAssign");
-        } break;
-        case TOKEN_SYMBOL: {
-            printf("TokenSymbol");
-        } break;
+    case TOKEN_INT: {
+        printf("TokenInt");
+    }
+    break;
+    case TOKEN_FLOAT: {
+        printf("TokenFloat");
+    }
+    break;
+    case TOKEN_PLUS: {
+        printf("TokenPlus");
+    }
+    break;
+    case TOKEN_MINUS: {
+        printf("TokenMinus");
+    }
+    break;
+    case TOKEN_OPARENTHESIS: {
+        printf("TokenOpenParenthesis");
+    }
+    break;
+    case TOKEN_CPARENTHESIS: {
+        printf("TokenCloseParenthesis");
+    }
+    break;
+    case TOKEN_MULT: {
+        printf("TokenMult");
+    }
+    break;
+    case TOKEN_DIV: {
+        printf("TokenDiv");
+    }
+    break;
+    case TOKEN_EXP: {
+        printf("TokenExponent");
+    }
+    break;
+    case TOKEN_MOD: {
+        printf("TokenModulus");
+    }
+    break;
+    case TOKEN_EQUALITY: {
+        printf("TokenEquality");
+    }
+    break;
+    case TOKEN_ASSIGN: {
+        printf("TokenAssign");
+    }
+    break;
+    case TOKEN_SYMBOL: {
+        printf("TokenSymbol");
+    }
+    break;
     }
 }
 
@@ -113,38 +126,45 @@ Token* token_next_operator(const char* input, size_t* index) {
     char c = input[*index];
     Token* token;
     switch (c) {
-        case '+': {
-            token = create_token(TOKEN_PLUS, input + (*index)++, 1);
-        } break;
-        case '-': {
-            token = create_token(TOKEN_MINUS, input + (*index)++, 1);
-        } break;
-        case '*': {
-            token = create_token(TOKEN_MULT, input + (*index)++, 1);
-        } break;
-        case '/': {
-            token = create_token(TOKEN_DIV, input + (*index)++, 1);
-        } break;
-        case '^': {
-            token = create_token(TOKEN_EXP, input + (*index)++, 1);
-        } break;
-        case '%': {
-            token = create_token(TOKEN_MOD, input + (*index)++, 1);
-        } break;
-        case '=': {
-            char next = input[*index + 1];
-            if (next != '\0' && next == '=') {
-                token = create_token(TOKEN_EQUALITY, input + (*index), 2);
-                *index = *index + 2;
-            } else {
-                // assignement
-                token = create_token(TOKEN_ASSIGN, input + (*index)++, 1);
-            }
-        } break;
-        default: {
-            fprintf(stderr, "[ERROR] %c operator not implemented\n", c);
-            exit(1);
+    case '+': {
+        token = create_token(TOKEN_PLUS, input + (*index)++, 1);
+    }
+    break;
+    case '-': {
+        token = create_token(TOKEN_MINUS, input + (*index)++, 1);
+    }
+    break;
+    case '*': {
+        token = create_token(TOKEN_MULT, input + (*index)++, 1);
+    }
+    break;
+    case '/': {
+        token = create_token(TOKEN_DIV, input + (*index)++, 1);
+    }
+    break;
+    case '^': {
+        token = create_token(TOKEN_EXP, input + (*index)++, 1);
+    }
+    break;
+    case '%': {
+        token = create_token(TOKEN_MOD, input + (*index)++, 1);
+    }
+    break;
+    case '=': {
+        char next = input[*index + 1];
+        if (next != '\0' && next == '=') {
+            token = create_token(TOKEN_EQUALITY, input + (*index), 2);
+            *index = *index + 2;
+        } else {
+            // assignement
+            token = create_token(TOKEN_ASSIGN, input + (*index)++, 1);
         }
+    }
+    break;
+    default: {
+        fprintf(stderr, "[ERROR] %c operator not implemented\n", c);
+        exit(1);
+    }
     }
     return token;
 }

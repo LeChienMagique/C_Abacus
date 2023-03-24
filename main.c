@@ -24,52 +24,29 @@ void print_usage() {
     exit(1);
 }
 
+static const char* NODE_FMT[NODE_COUNT + 1] = {"INT", "FLOAT", "+", "-", "+", "-", "/", "*", "^", "%", "==", "=", "FUNC", "SYMBOL", "Expr", "Program", "!NodeCount!"};
+
 void write_node_label(FILE* f, ASTNode* node) {
     switch (node->type) {
-        case NODE_INT: {
-            fprintf(f, "[label=\"%d\"]\n", *((int*) node->value));
-        } break;
-        case NODE_FLOAT: {
-            fprintf(f, "[label=\"%f\"]\n", *((double*) node->value));
-        } break;
-        case NODE_SYMBOL: {
-            fprintf(f, "[label=\"%s\"]\n", node->token->value);
-        } break;
-        case NODE_FUNCTION: {
-            fprintf(f, "[label=\"Func(%s)\"]\n", node->token->value);
-        } break;
-        case NODE_MULT: {
-            fprintf(f, "[label=\"*\"]\n");
-        } break;
-        case NODE_UPLUS:
-        case NODE_PLUS: {
-            fprintf(f, "[label=\"+\"]\n");
-        } break;
-        case NODE_DIV: {
-            fprintf(f, "[label=\"/\"]\n");
-        } break;
-        case NODE_EXP: {
-            fprintf(f, "[label=\"^\"]\n");
-        } break;
-        case NODE_MOD: {
-            fprintf(f, "[label=\"%%\"]\n");
-        } break;
-        case NODE_EQUALITY: {
-            fprintf(f, "[label=\"==\"]\n");
-        } break;
-        case NODE_ASSIGN: {
-            fprintf(f, "[label=\"=\"]\n");
-        } break;
-        case NODE_MINUS:
-        case NODE_UMINUS: {
-            fprintf(f, "[label=\"-\"]\n");
-        } break;
-        case NODE_EXPR: {
-            fprintf(f, "[label=\"Expr\"]\n");
-        } break;
-        case NODE_PROGRAM: {
-            fprintf(f, "[label=\"Program\"]\n");
-        } break;
+    case NODE_INT: {
+        fprintf(f, "[label=\"%d\"]\n", *((int*) node->value));
+    }
+    break;
+    case NODE_FLOAT: {
+        fprintf(f, "[label=\"%f\"]\n", *((double*) node->value));
+    }
+    break;
+    case NODE_SYMBOL: {
+        fprintf(f, "[label=\"%s\"]\n", node->token->value);
+    }
+    break;
+    case NODE_FUNCTION: {
+        fprintf(f, "[label=\"Func(%s)\"]\n", node->token->value);
+    }
+    break;
+    default: {
+        fprintf(f, "[label=\"%s\"]", NODE_FMT[node->type]);
+    }
     }
 }
 
@@ -101,6 +78,7 @@ void generate_dot(ASTNode* ast) {
         exit(1);
     }
     fprintf(fp, "graph {\n");
+    // fprintf(fp, "bgcolor=\"grey\"\n");
     _generate_dot(fp, ast, -1, 0);
     fprintf(fp, "}");
     fclose(fp);
@@ -190,19 +168,21 @@ void repl_mode() {
 
 
 int main(int argc, char** argv) {
-    // TODO: REPL mode
+    // TODO: refactor code (partially done)
+    // TODO: implement scopes (partially done)
+    // TODO: implement function definition
     // TODO: ideas:
     //       - add some math functions
     // TODO: beautify debug graph
     // TODO: use automaton to tokenize
     /*
     Usage:
-    ./main <input> [options]: run input
-    ./main test run : run tests
-    ./main test save : save expected results
+        ./main <input> [options]: run input
+        ./main test run : run tests
+        ./main test save : save expected results
     Options:
-    --graph  Generate AST graph
-    --debug  Prints debug information
+        --graph  Generate AST graph
+        --debug  Prints debug information
     */
     if (argc >= 2) {
         // test
