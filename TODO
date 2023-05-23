@@ -1,5 +1,6 @@
-- Function definition tests
-- Depict how nodes look in ast
-- Make better arguments parser
 - Create proper error logging
-- Variables should not be identified by their name but by their hash.
+- Make better arguments parser
+- Depict how nodes look in ast
+
+Optional:
+- Variables should not be identified by their name as it is pretty inefficient.
