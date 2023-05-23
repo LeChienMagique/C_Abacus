@@ -64,6 +64,10 @@ void print_type(FILE* out, int token_type) {
         fprintf(out, "TokenSymbol");
     }
     break;
+    case TOKEN_SEMICOLON: {
+        fprintf(out, "TokenSemicolon");
+    }
+    break;
     }
 }
 

@@ -63,7 +63,19 @@ ASTNode* ast_next_number(Token** tokens);
 ASTNode* ast_next_funcdef(Token** tokens);
 void dump_tokens(Token** tokens);
 Function* get_function(EvalScope* scope, const char* name);
+void free_scope(EvalScope* scope);
 
+void dump_scope(EvalScope* scope) {
+    printf("Functions: ");
+    for (Function* func = scope->functions->next; func; func = func->next) {
+        printf("%s, ", func->name);
+    }
+    printf("\nVariables: ");
+    for (Variable* var = scope->variables->next; var; var = var->next) {
+        printf("%s, ", var->name);
+    }
+    printf("\n");
+}
 
 size_t ast_count_children(ASTNode* node) {
     size_t count = 0;
@@ -93,6 +105,15 @@ void advance_tokens(Token** tokens) {
     *tokens = next;
 }
 
+
+void advance_free_tokens(Token** tokens) {
+    Token* next = (*tokens)->next;
+    if ((*tokens)->value) {
+        free((*tokens)->value);
+    }
+    free(*tokens);
+    *tokens = next;
+}
 
 ASTNode* create_node(Token* token, int type) {
     ASTNode* node = calloc(1, sizeof(ASTNode));
@@ -242,7 +263,7 @@ ASTNode* ast_next_operand(Token** tokens) {
         return op;
     }
 
-    // symbol'(' expr {',' expr} ')'
+    // symbol'(' {expr {',' expr}} ')'
     if ((*tokens)->type == TOKEN_SYMBOL) {
         ASTNode* symbol = create_node(*tokens, -1);
         advance_tokens(tokens);
@@ -254,13 +275,16 @@ ASTNode* ast_next_operand(Token** tokens) {
             } else {
                 symbol->type = NODE_FUNCTION;
             }
+            advance_tokens(tokens);
 
             ASTNode* expr;
             while (!check_token_type(*tokens, TOKEN_CPARENTHESIS)) {
-                advance_tokens(tokens); // skip OPAR or comma
-
                 expr = ast_next_expr(tokens);
                 append_child(symbol, expr);
+
+                if (check_token_type(*tokens, TOKEN_COMMA)) {
+                    advance_tokens(tokens);    // skip comma
+                }
             }
             advance_tokens(tokens); // skip CPAR
         }
@@ -418,7 +442,7 @@ ASTNode* ast_next_expr(Token** tokens) {
 
 
 ASTNode* ast_next_funcdef(Token** tokens) {
-    // funcdef = 'def' symbol '(' symbol {, symbol} ')' = expr
+    // funcdef = 'def' symbol '(' {symbol {, symbol}} ')' = expr
 
     // create func def node
     // create func node
@@ -445,10 +469,10 @@ ASTNode* ast_next_funcdef(Token** tokens) {
         print_token(stderr, *tokens);
         exit(1);
     }
+    advance_tokens(tokens);
 
     // parse func args
     while (!check_token_type(*tokens, TOKEN_CPARENTHESIS)) {
-        advance_tokens(tokens); // skip first oparenthesis or comma
         if (!check_token_type(*tokens, TOKEN_SYMBOL)) {
             fprintf(stderr, "Expected symbol but found: ");
             print_token(stderr, *tokens);
@@ -457,7 +481,11 @@ ASTNode* ast_next_funcdef(Token** tokens) {
 
         ASTNode* arg = create_node(*tokens, NODE_SYMBOL);
         append_child(func, arg);
-        advance_tokens(tokens);
+        advance_tokens(tokens); // skip symbol
+
+        if (check_token_type(*tokens, TOKEN_COMMA)) {
+            advance_tokens(tokens);    // skip comma
+        }
     }
     advance_tokens(tokens);
 
@@ -466,7 +494,7 @@ ASTNode* ast_next_funcdef(Token** tokens) {
         print_token(stderr, *tokens);
         exit(1);
     }
-    advance_tokens(tokens);
+    advance_free_tokens(tokens);
 
     // parse func body
     ASTNode* body = ast_next_expr(tokens);
@@ -495,15 +523,18 @@ ASTNode* build_AST(Token** tokens) {
     ast->type = NODE_PROGRAM;
 
     ASTNode* node = ast_next_funcdef(tokens);
-    if (node != NULL) {
-        append_child(ast, node);
-    } else {
-        append_child(ast, ast_next_expr(tokens));
+    if (node == NULL) {
+        node = ast_next_expr(tokens);
     }
+    append_child(ast, node);
 
-    while (*tokens && (*tokens)->type == TOKEN_SEMICOLON) {
-        advance_tokens(tokens);
-        append_child(ast, ast_next_expr(tokens));
+    while (check_token_type(*tokens, TOKEN_SEMICOLON)) {
+        advance_free_tokens(tokens);
+        ASTNode* node = ast_next_funcdef(tokens);
+        if (node == NULL) {
+            node = ast_next_expr(tokens);
+        }
+        append_child(ast, node);
     }
 
     if (*tokens) {
@@ -515,7 +546,6 @@ ASTNode* build_AST(Token** tokens) {
 
     return ast;
 }
-
 
 Result* build_function_arguments(EvalScope* scope, ASTNode* func) {
     int arity = get_function_arity(scope, func);
@@ -539,6 +569,14 @@ Result* build_function_arguments(EvalScope* scope, ASTNode* func) {
         i++;
     }
     return args;
+}
+
+EvalScope* create_scope(EvalScope* parent) {
+    EvalScope* scope = calloc(1, sizeof(EvalScope));
+    scope->functions = calloc(1, sizeof(Function));
+    scope->variables = calloc(1, sizeof(Variable));
+    scope->parent = parent;
+    return scope;
 }
 
 Variable* get_variable(EvalScope* scope, const char* name) {
@@ -578,16 +616,33 @@ Function* get_function(EvalScope* scope, const char* name) {
             return func;
         }
     }
-    fprintf(stderr, "Undeclared function: %s", name);
-    exit(1);
+    return NULL;
+}
+
+void free_function_fields(Function* func) {
+    free(func->name);
+    free_scope(func->scope);
+}
+
+void redefine_function(Function* old, EvalScope* scope, ASTNode* funcdef_node, int arity) {
+    free_scope(old->scope);
+    old->arity = arity;
+    old->scope = create_scope(scope);
+    old->args = funcdef_node->children->children;
+    old->body = funcdef_node->children->next;
 }
 
 Function* add_function(EvalScope* scope, ASTNode* funcdef_node, int arity) {
-    Function* last = scope->functions;
-    // TODO: overwrite function
-    for (; last->next; last = last->next) { }
+    Function* existing = get_function(scope, funcdef_node->children->token->value);
+    if (existing != NULL) {
+        redefine_function(existing, scope, funcdef_node, arity);
+        return existing;
+    }
 
     Function* new_func = calloc(1, sizeof(Function));
+    Function* last = scope->functions;
+    for (; last->next; last = last->next) { }
+
     ASTNode* func_node = funcdef_node->children;
 
     size_t name_len = strlen(func_node->token->value);
@@ -596,23 +651,23 @@ Function* add_function(EvalScope* scope, ASTNode* funcdef_node, int arity) {
     memcpy(new_func->name, func_node->token->value, name_len);
 
     new_func->arity = arity;
-    new_func->scope = calloc(1, sizeof(EvalScope));
-    new_func->scope->variables = calloc(1, sizeof(Variable));
+    new_func->scope = create_scope(scope);
     new_func->args = funcdef_node->children->children;
     new_func->body = funcdef_node->children->next;
 
     last->next = new_func;
+
     return new_func;
 }
 
 Result _interpret_ast(EvalScope* scope, ASTNode* node);
 
 Result interpret_ast(ASTNode* node) {
-    EvalScope* top_scope = calloc(1, sizeof(EvalScope));
-    top_scope->functions = calloc(1, sizeof(Function));
-    top_scope->variables = calloc(1, sizeof(Variable));
+    EvalScope* top_scope = create_scope(NULL);
 
-    return _interpret_ast(top_scope, node);
+    Result res = _interpret_ast(top_scope, node);
+    free_scope(top_scope);
+    return res;
 }
 
 Result _interpret_ast(EvalScope* scope, ASTNode* node) {
@@ -709,7 +764,6 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
         set_variable_value(scope, node->children->token->value, var_value);
         return var_value;
     }
-
     case NODE_FUNCDEF: {
         ASTNode* func_node = node->children;
         int arity = 0;
@@ -719,10 +773,11 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
         add_function(scope, node, arity);
         return (Result) {
             .type = RESULT_INT,
-            .vali = 1,
+            .vali = 0,
             .valf = 0
         };
     }
+
     case NODE_FUNCTION: {
         Function* func = get_function(scope, node->token->value);
         ASTNode* arg_name = func->args;
@@ -773,6 +828,43 @@ void free_AST(ASTNode* root) {
         free(root->token);
     }
     free(root);
+}
+
+void free_scope(EvalScope* scope);
+void free_variables(Variable* variables);
+
+void free_functions(Function* functions) {
+    if (functions == NULL) {
+        return;
+    }
+
+    Function* func = functions;
+    if (func->scope->functions == NULL) {
+        printf("func '%s', scope is null\n", func->name);
+    }
+    free_scope(func->scope);
+    free(func->name);
+    free_functions(functions->next);
+    free(func);
+}
+
+void free_variables(Variable* variables) {
+    if (variables == NULL) {
+        return;
+    }
+
+    Variable* var = variables;
+    free(var->name);
+    free_variables(variables->next);
+    free(var);
+}
+
+void free_scope(EvalScope* scope) {
+    free_functions(scope->functions->next);
+    free_variables(scope->variables->next);
+    free(scope->functions);
+    free(scope->variables);
+    free(scope);
 }
 
 void print_node(ASTNode* node) {

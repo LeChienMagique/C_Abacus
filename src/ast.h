@@ -89,6 +89,6 @@ void print_AST(ASTNode* root);
 
 ASTNode* build_AST(Token** tokens);
 Result interpret_ast(ASTNode* node);
-
+void dump_tokens(Token** tokens);
 void free_AST(ASTNode* ast);
 #endif // AST_H
