@@ -6,66 +6,74 @@
 
 #include "./token.h"
 
-void print_type(int token_type) {
+void print_type(FILE* out, int token_type) {
     switch (token_type) {
     case TOKEN_INT: {
-        printf("TokenInt");
+        fprintf(out, "TokenInt");
     }
     break;
     case TOKEN_FLOAT: {
-        printf("TokenFloat");
+        fprintf(out, "TokenFloat");
     }
     break;
     case TOKEN_PLUS: {
-        printf("TokenPlus");
+        fprintf(out, "TokenPlus");
     }
     break;
     case TOKEN_MINUS: {
-        printf("TokenMinus");
+        fprintf(out, "TokenMinus");
     }
     break;
     case TOKEN_OPARENTHESIS: {
-        printf("TokenOpenParenthesis");
+        fprintf(out, "TokenOpenParenthesis");
     }
     break;
     case TOKEN_CPARENTHESIS: {
-        printf("TokenCloseParenthesis");
+        fprintf(out, "TokenCloseParenthesis");
     }
     break;
     case TOKEN_MULT: {
-        printf("TokenMult");
+        fprintf(out, "TokenMult");
     }
     break;
     case TOKEN_DIV: {
-        printf("TokenDiv");
+        fprintf(out, "TokenDiv");
     }
     break;
     case TOKEN_EXP: {
-        printf("TokenExponent");
+        fprintf(out, "TokenExponent");
     }
     break;
     case TOKEN_MOD: {
-        printf("TokenModulus");
+        fprintf(out, "TokenModulus");
     }
     break;
     case TOKEN_EQUALITY: {
-        printf("TokenEquality");
+        fprintf(out, "TokenEquality");
     }
     break;
     case TOKEN_ASSIGN: {
-        printf("TokenAssign");
+        fprintf(out, "TokenAssign");
+    }
+    break;
+    case TOKEN_FUNCDEF: {
+        fprintf(out, "TokenFuncdef");
     }
     break;
     case TOKEN_SYMBOL: {
-        printf("TokenSymbol");
+        fprintf(out, "TokenSymbol");
     }
     break;
     }
 }
 
-void print_token(Token* token) {
-    print_type(token->type);
-    printf(" value: '%s'", token->value);
+void print_token(FILE* out, Token* token) {
+    if (token == NULL) {
+        fprintf(out, "nothing");
+        return;
+    }
+    print_type(out, token->type);
+    fprintf(out, " value: '%s'", token->value);
 }
 
 bool is_digit(char c) {
@@ -80,12 +88,35 @@ bool is_alpha(char c) {
     return is_digit(c) || is_letter(c);
 }
 
-#define OPERATORS_COUNT 7
-// '=' and "==" should be different but works for now
-const char operators[OPERATORS_COUNT] = {'+', '-', '*', '/', '^', '%', '='};
-bool is_operator(char c) {
+#define OPERATORS_COUNT 9
+typedef struct {
+    const char* value;
+    const size_t len;
+    const TokenType type;
+} Operator;
+
+// CAREFUL: if an operator is a prefix of another operator it should be placed after because of how
+//          ast_next_operator works
+const Operator operators[OPERATORS_COUNT] = {{"+", 1, TOKEN_PLUS}, {"-", 1, TOKEN_MINUS}, {"*", 1, TOKEN_MULT},
+    {"/", 1, TOKEN_DIV}, {"^", 1, TOKEN_EXP}, {"%", 1, TOKEN_MOD}, {"==", 2, TOKEN_EQUALITY}, {"=", 1, TOKEN_ASSIGN},
+    {"def", 3, TOKEN_FUNCDEF}
+};
+// const char operators[OPERATORS_COUNT] = {'+', '-', '*', '/', '^', '%', '='};
+bool is_operator(const char* input, size_t index) {
+    bool result;
     for (size_t i = 0; i < OPERATORS_COUNT; i++) {
-        if (c == operators[i]) {
+        result = true;
+        for (size_t j = 0; j < operators[i].len; j++) {
+            if (input[index + j] == '\0') {
+                return false;
+            }
+            if (input[index + j] != operators[i].value[j]) {
+                result = false;
+                break;
+            }
+        }
+
+        if (result) {
             return true;
         }
     }
@@ -123,50 +154,27 @@ Token* token_next_number(const char* input, size_t* index) {
 }
 
 Token* token_next_operator(const char* input, size_t* index) {
-    char c = input[*index];
-    Token* token;
-    switch (c) {
-    case '+': {
-        token = create_token(TOKEN_PLUS, input + (*index)++, 1);
-    }
-    break;
-    case '-': {
-        token = create_token(TOKEN_MINUS, input + (*index)++, 1);
-    }
-    break;
-    case '*': {
-        token = create_token(TOKEN_MULT, input + (*index)++, 1);
-    }
-    break;
-    case '/': {
-        token = create_token(TOKEN_DIV, input + (*index)++, 1);
-    }
-    break;
-    case '^': {
-        token = create_token(TOKEN_EXP, input + (*index)++, 1);
-    }
-    break;
-    case '%': {
-        token = create_token(TOKEN_MOD, input + (*index)++, 1);
-    }
-    break;
-    case '=': {
-        char next = input[*index + 1];
-        if (next != '\0' && next == '=') {
-            token = create_token(TOKEN_EQUALITY, input + (*index), 2);
-            *index = *index + 2;
-        } else {
-            // assignement
-            token = create_token(TOKEN_ASSIGN, input + (*index)++, 1);
+    bool is_op;
+    size_t start = *index;
+    for (size_t i = 0; i < OPERATORS_COUNT; i++) {
+        is_op = true;
+        Operator op = operators[i];
+        for (size_t j = 0; j < op.len; j++) {
+            if (input[*index + j] == '\0') {
+                return NULL;
+            }
+            if (input[*index + j] != op.value[j]) {
+                is_op = false;
+                break;
+            }
+        }
+
+        if (is_op) {
+            *index += op.len;
+            return create_token(op.type, input + start, op.len);
         }
     }
-    break;
-    default: {
-        fprintf(stderr, "[ERROR] %c operator not implemented\n", c);
-        exit(1);
-    }
-    }
-    return token;
+    return NULL;
 }
 
 Token* token_next_symbol(const char* input, size_t* index) {
@@ -182,13 +190,14 @@ Token* token_next_symbol(const char* input, size_t* index) {
 
 Token* next_token(const char* input, size_t* index) {
     char c = input[*index];
+    Token* tok;
     while (c != '\0') {
         if (c == ' ') {
             (*index)++;
         } else if (is_digit(c)) {
             return token_next_number(input, index);
-        } else if (is_operator(c)) {
-            return token_next_operator(input, index);
+        } else if ((tok = token_next_operator(input, index)) != NULL) {
+            return tok;
         } else if (c == '(') {
             return create_token(TOKEN_OPARENTHESIS, input + (*index)++, 1);
         } else if (c == ')') {

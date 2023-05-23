@@ -1,4 +1,5 @@
 #ifndef TOKEN_H
+#include <stdio.h>
 #define TOKEN_H
 
 
@@ -14,6 +15,7 @@ typedef enum {
     TOKEN_MOD,
     TOKEN_EQUALITY,
     TOKEN_ASSIGN,
+    TOKEN_FUNCDEF,
     //
     TOKEN_OPARENTHESIS,
     TOKEN_CPARENTHESIS,
@@ -29,7 +31,7 @@ typedef struct Token {
     struct Token* next;
 } Token;
 
-void print_token(Token* token);
+void print_token(FILE* out, Token* token);
 Token* next_token(const char* input, size_t* index);
 void free_tokens(Token* tokens);
 #endif // TOKEN_H

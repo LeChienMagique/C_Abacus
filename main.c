@@ -24,7 +24,7 @@ void print_usage() {
     exit(1);
 }
 
-static const char* NODE_FMT[NODE_COUNT + 1] = {"INT", "FLOAT", "+", "-", "+", "-", "/", "*", "^", "%", "==", "=", "FUNC", "SYMBOL", "Expr", "Program", "!NodeCount!"};
+static const char* NODE_FMT[NODE_COUNT + 1] = {"INT", "FLOAT", "+", "-", "+", "-", "/", "*", "^", "%", "==", "=", "FUNCDEF", "FUNC", "SYMBOL", "Expr", "Program", "!NodeCount!"};
 
 void write_node_label(FILE* f, ASTNode* node) {
     switch (node->type) {
@@ -42,6 +42,10 @@ void write_node_label(FILE* f, ASTNode* node) {
     break;
     case NODE_FUNCTION: {
         fprintf(f, "[label=\"Func(%s)\"]\n", node->token->value);
+    }
+    break;
+    case NODE_FUNCDEF: {
+        fprintf(f, "[label=\"FuncDef\"]\n");
     }
     break;
     default: {
@@ -96,7 +100,7 @@ Result evaluate_input(char* input) {
     if (DEBUG_MODE) {
         printf("Tokens:\n");
         for (Token* token = sentinel->next; token; token = token->next) {
-            print_token(token);
+            print_token(stdout, token);
             printf("\n");
         }
         printf("\n");

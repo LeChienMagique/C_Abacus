@@ -56,31 +56,47 @@ Result ast_do_binop(Result a, Result b, int (*funi) (int, int), double (*funf) (
     return result;
 }
 
-int addi(int a, int b) { return a + b; }
-double addf(double a, double b) { return a + b; }
+int addi(int a, int b) {
+    return a + b;
+}
+double addf(double a, double b) {
+    return a + b;
+}
 
 Result ast_add(Result a, Result b) {
     return ast_do_binop(a, b, addi, addf);
 }
 
-int subi(int a, int b) { return a - b; }
-double subf(double a, double b) { return a - b; }
+int subi(int a, int b) {
+    return a - b;
+}
+double subf(double a, double b) {
+    return a - b;
+}
 
 Result ast_sub(Result a, Result b) {
     return ast_do_binop(a, b, subi, subf);
 }
 
 
-int muli(int a, int b) { return a * b; }
-double mulf(double a, double b) { return a * b; }
+int muli(int a, int b) {
+    return a * b;
+}
+double mulf(double a, double b) {
+    return a * b;
+}
 
 Result ast_mul(Result a, Result b) {
     return ast_do_binop(a, b, muli, mulf);
 }
 
 
-int divi(int a, int b) { return a / b; }
-double divf(double a, double b) { return a / b; }
+int divi(int a, int b) {
+    return a / b;
+}
+double divf(double a, double b) {
+    return a / b;
+}
 
 Result ast_div(Result a, Result b) {
     if (b.type == RESULT_FLOAT) {
@@ -240,22 +256,32 @@ Result ast_fibo(Result n) {
     return result;
 }
 
-int imin(int a, int b) { return (int) fmin(a, b); }
+int imin(int a, int b) {
+    return (int) fmin(a, b);
+}
 Result ast_min(Result a, Result b) {
     return ast_do_binop(a, b, imin, fmin);
 }
 
 
-int imax(int a, int b) { return (int) fmax(a, b); }
+int imax(int a, int b) {
+    return (int) fmax(a, b);
+}
 Result ast_max(Result a, Result b) {
     return ast_do_binop(a, b, imax, fmax);
 }
 
 
 int is_prime(int n) {
-    if (n <= 1) { return 0; }
-    if (n == 2) { return 1; }
-    if (n % 2 == 0) { return 0; }
+    if (n <= 1) {
+        return 0;
+    }
+    if (n == 2) {
+        return 1;
+    }
+    if (n % 2 == 0) {
+        return 0;
+    }
 
     int limit = (int) floor(sqrt(n));
 
@@ -319,8 +345,7 @@ Result ast_gcd(Result a, Result b) {
     };
 }
 
-
-Result ast_evaluate_function(const char* func_name, int argc, Result* argv) {
+Result ast_evaluate_builtin_function(const char* func_name, int argc, Result* argv) {
     (void) argc;
 
     if (strcmp(func_name, "sqrt") == 0) {

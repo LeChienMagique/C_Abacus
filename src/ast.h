@@ -19,10 +19,12 @@ typedef enum {
     NODE_EQUALITY,
     NODE_ASSIGN,
     //
+    NODE_BUILTIN_FUNCTION,
     NODE_FUNCTION,
     NODE_SYMBOL,
     NODE_EXPR,
     NODE_PROGRAM,
+    NODE_FUNCDEF,
     NODE_COUNT
 } NodeType;
 
@@ -71,9 +73,6 @@ typedef struct {
     int vali;
     double valf;
 } Result;
-
-
-
 
 
 // ASTNode* ast_next_expr(Token** tokens);

@@ -1,0 +1,6 @@
+- Function definition
+- Depict how nodes look in ast
+- Make better arguments parser
+- Create proper error logging
+- Treat builtin functions separately
+- Variables should not be identified by their name but by their hash.

@@ -111,9 +111,13 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
             continue;
         }
         sv_expected = sv_chop_by_delim(&sv_outputs, '\n');
+        char str_expected[sv_expected.count + 1];
+        sprintf(str_expected, SV_Fmt, SV_Arg(sv_expected));
 
         char input[sv_input.count + 1];
         sprintf(input, SV_Fmt, SV_Arg(sv_input));
+
+        // printf("[TESTING] %s = %s\n", input, str_expected);
 
         Result result = evaluate_input(input);
         char str_result[512]; // should be enough for everyone
@@ -123,8 +127,6 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
             sprintf(str_result, "%f", result.valf);
         }
 
-        char str_expected[sv_expected.count + 1];
-        sprintf(str_expected, SV_Fmt, SV_Arg(sv_expected));
         if (strcmp(str_result, str_expected)) {
             printf("[ERROR] '%s' got '%s' expected '%s'\n", input, str_result, str_expected);
             passed = false;

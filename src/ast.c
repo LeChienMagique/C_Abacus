@@ -7,11 +7,11 @@
 #include "./ast.h"
 #include "./ast_operations.h"
 
-const OpPrecedence OPERATOR_PRECEDENCE[NODE_COUNT + 1] = {-1, -1, OP_UPLUS, OP_UMINUS, OP_PLUS, OP_MINUS, OP_DIV, OP_MULT, OP_EXP, OP_MOD, OP_EQUALITY, OP_ASSIGN, -1, -1, -1, -1, -1};
+const OpPrecedence OPERATOR_PRECEDENCE[NODE_COUNT + 1] = {-1, -1, OP_UPLUS, OP_UMINUS, OP_PLUS, OP_MINUS, OP_DIV, OP_MULT, OP_EXP, OP_MOD, OP_EQUALITY, OP_ASSIGN, -1, -1, -1, -1, -1, -1};
 
-const bool IS_OPERATOR[NODE_COUNT + 1] = {false, false, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false};
+const bool IS_OPERATOR[NODE_COUNT + 1] = {false, false, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false};
 
-const char* NODE_NAMES[NODE_COUNT + 1] = {"NodeInt", "NodeFloat", "NodeUplus", "NodeUminus", "NodePlus", "NodeMinus", "NodeDiv", "NodeMult", "NodeExp", "NodeMod", "NodeEquality", "NodeAssign", "NodeFunction", "NodeSymbol", "NodeExpr", "NodeProgram", "!NodeCount!"};
+const char* NODE_NAMES[NODE_COUNT + 1] = {"NodeInt", "NodeFloat", "NodeUplus", "NodeUminus", "NodePlus", "NodeMinus", "NodeDiv", "NodeMult", "NodeExp", "NodeMod", "NodeEquality", "NodeAssign", "NodeBuiltinFunction", "NodeFunction", "NodeSymbol", "NodeExpr", "NodeProgram", "NodeFuncdef", "!NodeCount!"};
 
 const NodeType NODE_TYPES[TOKEN_COUNT + 1] = {
     NODE_INT, NODE_FLOAT, NODE_PLUS, NODE_MINUS, NODE_MULT, NODE_DIV, NODE_EXP, NODE_MOD, NODE_EQUALITY, NODE_ASSIGN, NODE_COUNT, NODE_COUNT, NODE_SYMBOL, NODE_COUNT, NODE_COUNT, NODE_COUNT
@@ -19,15 +19,17 @@ const NodeType NODE_TYPES[TOKEN_COUNT + 1] = {
 
 const OpArity OPERATOR_ARITY[NODE_COUNT + 1] = {-1, -1, AR_UMINUS, AR_UPLUS, AR_PLUS, AR_MINUS, AR_DIV, AR_MULT, AR_EXP, AR_MOD, AR_EQUALITY, AR_ASSIGN, -1, -1, -1, -1, -1};
 
-// Function linked list
+// Function linked list with sentinel
 typedef struct Function {
     char* name;
-    int arity;
+    size_t arity;
+    ASTNode* body;
+    ASTNode* args;
     struct EvalScope* scope;
     struct Function* next;
 } Function;
 
-// Variable linked list
+// Variable linked list with sentinel
 typedef struct Variable {
     Result value;
     char* name;
@@ -44,7 +46,7 @@ typedef struct EvalScope {
 /*
 program = funcdef | expr
 
-funcdef = 'def' name '(' arg {, arg} ')' = exprb
+funcdef = 'def' symbol '(' symbol {, symbol} ')' = expr
 
 expr = [unary] operand {operator operand}
 
@@ -58,7 +60,22 @@ ASTNode* ast_next_expr(Token** tokens);
 ASTNode* ast_next_operator(Token** tokens);
 ASTNode* ast_next_operand(Token** tokens);
 ASTNode* ast_next_number(Token** tokens);
+ASTNode* ast_next_funcdef(Token** tokens);
 void dump_tokens(Token** tokens);
+Function* get_function(EvalScope* scope, const char* name);
+
+
+size_t ast_count_children(ASTNode* node) {
+    size_t count = 0;
+    for (ASTNode* child = node->children; child; child = child->next) {
+        count++;
+    }
+    return count;
+}
+
+bool check_token_type(Token* token, TokenType expected) {
+    return token != NULL && token->type == expected;
+}
 
 void advance_tokens(Token** tokens) {
     Token* next = (*tokens)->next;
@@ -106,10 +123,10 @@ bool is_builtin_function(const char* func_name) {
 }
 
 
-int get_function_arity(ASTNode* func) {
+int get_bultin_function_arity(ASTNode* func) {
     char* func_name = (char*) func->token->value;
     if (func_name == NULL) {
-        fprintf(stderr, "[ERROR] func_name == NULL");
+        fprintf(stderr, "[ERROR] func_name = NULL");
         exit(1);
     }
 
@@ -141,7 +158,15 @@ int get_function_arity(ASTNode* func) {
         printf("\n");
         exit(1);
     }
+}
 
+int get_function_arity(EvalScope* scope, ASTNode* func_node) {
+    if (is_builtin_function(func_node->token->value)) {
+        return get_bultin_function_arity(func_node);
+    }
+
+    Function* func = get_function(scope, func_node->token->value);
+    return func->arity;
 }
 
 bool ast_is_operator(ASTNode* node) {
@@ -223,36 +248,21 @@ ASTNode* ast_next_operand(Token** tokens) {
         advance_tokens(tokens);
 
         // function call
-        if (*tokens != NULL && (*tokens)->type == TOKEN_OPARENTHESIS) {
-            advance_tokens(tokens);
-            symbol->type = NODE_FUNCTION;
+        if (check_token_type(*tokens, TOKEN_OPARENTHESIS)) {
+            if (is_builtin_function(symbol->token->value)) {
+                symbol->type = NODE_BUILTIN_FUNCTION;
+            } else {
+                symbol->type = NODE_FUNCTION;
+            }
 
-            int arity = get_function_arity(symbol);
             ASTNode* expr;
-            for (int i = 0; i < arity; i++) {
+            while (!check_token_type(*tokens, TOKEN_CPARENTHESIS)) {
+                advance_tokens(tokens); // skip OPAR or comma
+
                 expr = ast_next_expr(tokens);
-                if (expr == NULL) {
-                    fprintf(stderr, "[ERROR] %s function accepts %d arguments, but only got %d.\n",
-                            symbol->token->value, arity, i);
-                    exit(1);
-                }
                 append_child(symbol, expr);
-
-                if (i != arity - 1) {
-                    if ((*tokens)->type != TOKEN_COMMA) {
-                        fprintf(stderr, "[ERROR] Expected comma after expression.");
-                        exit(1);
-                    }
-                    advance_tokens(tokens); // skip comma
-                }
             }
-
-            if (*tokens == NULL || (*tokens)->type != TOKEN_CPARENTHESIS) {
-                fprintf(stderr, "[ERROR] Mismatched parenthesis\n");
-                exit(1);
-            }
-            advance_tokens(tokens);
-
+            advance_tokens(tokens); // skip CPAR
         }
         // variable
         else {
@@ -279,9 +289,6 @@ ASTNode* ast_next_operand(Token** tokens) {
 
     return NULL;
 }
-
-
-
 
 
 ASTNode* ast_next_operator(Token** tokens) {
@@ -409,9 +416,73 @@ ASTNode* ast_next_expr(Token** tokens) {
     return expr;
 }
 
+
+ASTNode* ast_next_funcdef(Token** tokens) {
+    // funcdef = 'def' symbol '(' symbol {, symbol} ')' = expr
+
+    // create func def node
+    // create func node
+    // retrieve func args
+    // parse func definition
+    // funcdef node -> {{func node}, {func definition}}
+    if (!check_token_type(*tokens, TOKEN_FUNCDEF)) {
+        return NULL;
+    }
+    ASTNode* funcdef = create_node(*tokens, NODE_FUNCDEF);
+    advance_tokens(tokens);
+
+    if (!check_token_type(*tokens, TOKEN_SYMBOL)) {
+        fprintf(stderr, "Expected function name but found: ");
+        print_token(stderr, *tokens);
+        exit(1);
+    }
+    ASTNode* func = create_node(*tokens, NODE_FUNCTION);
+    append_child(funcdef, func);
+    advance_tokens(tokens);
+
+    if (!check_token_type(*tokens, TOKEN_OPARENTHESIS)) {
+        fprintf(stderr, "Expected open parenthesis after function declaration but found: ");
+        print_token(stderr, *tokens);
+        exit(1);
+    }
+
+    // parse func args
+    while (!check_token_type(*tokens, TOKEN_CPARENTHESIS)) {
+        advance_tokens(tokens); // skip first oparenthesis or comma
+        if (!check_token_type(*tokens, TOKEN_SYMBOL)) {
+            fprintf(stderr, "Expected symbol but found: ");
+            print_token(stderr, *tokens);
+            exit(1);
+        }
+
+        ASTNode* arg = create_node(*tokens, NODE_SYMBOL);
+        append_child(func, arg);
+        advance_tokens(tokens);
+    }
+    advance_tokens(tokens);
+
+    if (!check_token_type(*tokens, TOKEN_ASSIGN)) {
+        fprintf(stderr, "Expected '=' after function declaration but found: ");
+        print_token(stderr, *tokens);
+        exit(1);
+    }
+    advance_tokens(tokens);
+
+    // parse func body
+    ASTNode* body = ast_next_expr(tokens);
+    if (body == NULL) {
+        fprintf(stderr, "Expected function body but found nothing.");
+        exit(1);
+    }
+    append_child(funcdef, body);
+
+    return funcdef;
+}
+
+
 void dump_tokens(Token** tokens) {
     while (*tokens) {
-        print_token(*tokens);
+        print_token(stdout, *tokens);
         printf(" | ");
         advance_tokens(tokens);
     }
@@ -419,10 +490,16 @@ void dump_tokens(Token** tokens) {
 }
 
 ASTNode* build_AST(Token** tokens) {
-    // node that parenthesis tokens will be freed during this process
+    // parenthesis tokens will be freed during this process
     ASTNode* ast = calloc(1, sizeof(ASTNode));
     ast->type = NODE_PROGRAM;
-    append_child(ast, ast_next_expr(tokens));
+
+    ASTNode* node = ast_next_funcdef(tokens);
+    if (node != NULL) {
+        append_child(ast, node);
+    } else {
+        append_child(ast, ast_next_expr(tokens));
+    }
 
     while (*tokens && (*tokens)->type == TOKEN_SEMICOLON) {
         advance_tokens(tokens);
@@ -430,7 +507,7 @@ ASTNode* build_AST(Token** tokens) {
     }
 
     if (*tokens) {
-        printf("[ERROR] leftover tokens: ");
+        printf("[ERROR] Leftover tokens: ");
         dump_tokens(tokens);
         printf("\n");
         exit(1);
@@ -440,8 +517,8 @@ ASTNode* build_AST(Token** tokens) {
 }
 
 
-Result* build_function_arguments(ASTNode* func, int* argc) {
-    int arity = get_function_arity(func);
+Result* build_function_arguments(EvalScope* scope, ASTNode* func) {
+    int arity = get_function_arity(scope, func);
 
     int child_count = 0;
     for (ASTNode* child = func->children; child; child = child->next) {
@@ -455,8 +532,6 @@ Result* build_function_arguments(ASTNode* func, int* argc) {
         exit(EXIT_FAILURE);
     }
 
-    *argc = arity;
-
     Result* args = malloc(child_count * sizeof(Result));
     int i = 0;
     for (ASTNode* child = func->children; child; child = child->next) {
@@ -466,45 +541,65 @@ Result* build_function_arguments(ASTNode* func, int* argc) {
     return args;
 }
 
-Result* get_variable_value(EvalScope* scope, const char* name) {
+Variable* get_variable(EvalScope* scope, const char* name) {
     Variable* var = scope->variables;
     for (var = var->next; var; var = var->next) {
         if (strcmp(var->name, name) == 0) {
-            return &var->value;
+            return var;
         }
     }
     return NULL;
 }
 
-void add_variable(EvalScope* scope, ASTNode* var, Result value) {
-    Variable* last;
-    for (last = scope->variables; last->next; last = last->next) { }
+void set_variable_value(EvalScope* scope, const char* name, Result value) {
+    Variable* existing = get_variable(scope, name);
+    if (existing != NULL) {
+        existing->value = value;
+        return;
+    }
+
+    Variable* last = scope->variables;
+    for (; last->next; last = last->next) { }
 
     Variable* new_var = calloc(1, sizeof(Variable));
     new_var->value = value;
 
-    size_t name_len = strlen(var->token->value);
+    size_t name_len = strlen(name);
     new_var->name = malloc(name_len + 1);
     new_var->name[name_len] = '\0';
-    memcpy(new_var->name, var->token->value, name_len);
+    memcpy(new_var->name, name, name_len);
 
     last->next = new_var;
 }
 
-Function* add_function(EvalScope* scope, const char* name, int arity) {
-    Function* last;
-    for (last = scope->functions; last->next; last = last->next) { }
+Function* get_function(EvalScope* scope, const char* name) {
+    for (Function* func = scope->functions->next; func; func = func->next) {
+        if (strcmp(func->name, name) == 0) {
+            return func;
+        }
+    }
+    fprintf(stderr, "Undeclared function: %s", name);
+    exit(1);
+}
+
+Function* add_function(EvalScope* scope, ASTNode* funcdef_node, int arity) {
+    Function* last = scope->functions;
+    // TODO: overwrite function
+    for (; last->next; last = last->next) { }
 
     Function* new_func = calloc(1, sizeof(Function));
+    ASTNode* func_node = funcdef_node->children;
 
-    size_t name_len = strlen(name);
+    size_t name_len = strlen(func_node->token->value);
     new_func->name = malloc(name_len + 1);
     new_func->name[name_len] = '\0';
-    memcpy(new_func->name, name, name_len);
+    memcpy(new_func->name, func_node->token->value, name_len);
 
     new_func->arity = arity;
     new_func->scope = calloc(1, sizeof(EvalScope));
     new_func->scope->variables = calloc(1, sizeof(Variable));
+    new_func->args = funcdef_node->children->children;
+    new_func->body = funcdef_node->children->next;
 
     last->next = new_func;
     return new_func;
@@ -582,24 +677,27 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
     case NODE_INT: {
         return create_result_from_node(node);
     }
-    case NODE_FUNCTION: {
+    case NODE_BUILTIN_FUNCTION: {
         if (!is_builtin_function(node->token->value)) {
-            fprintf(stderr, "func name: '%s'\n", node->token->value);
+            fprintf(stderr, "Unknown function: '%s'\n", node->token->value);
             exit(20);
         }
-        int argc;
-        Result* argv = build_function_arguments(node, &argc);
+        Result* argv = build_function_arguments(scope, node);
         assert(node->token != NULL);
-        Result result = ast_evaluate_function(node->token->value, argc, argv);
+        Result result = ast_evaluate_builtin_function(
+                            node->token->value,
+                            get_function_arity(scope, node),
+                            argv);
         free(argv);
         return result;
     }
     case NODE_SYMBOL: {
-        Result* var_value = get_variable_value(scope, node->token->value);
+        Variable* var =  get_variable(scope, node->token->value);
+        Result* var_value = &var->value;
         if (var_value != NULL) {
             return *var_value;
         }
-        fprintf(stderr, "[ERROR] Undeclared function");
+        fprintf(stderr, "[ERROR] Undeclared variable: %s", node->token->value);
         exit(1);
     }
     case NODE_ASSIGN: {
@@ -608,11 +706,45 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
             exit(1);
         }
         Result var_value = _interpret_ast(scope, node->children->next);
-        add_variable(scope, node->children, var_value);
+        set_variable_value(scope, node->children->token->value, var_value);
         return var_value;
     }
+
+    case NODE_FUNCDEF: {
+        ASTNode* func_node = node->children;
+        int arity = 0;
+        for (ASTNode* arg = func_node->children; arg; arg = arg->next) {
+            arity++;
+        }
+        add_function(scope, node, arity);
+        return (Result) {
+            .type = RESULT_INT,
+            .vali = 1,
+            .valf = 0
+        };
+    }
+    case NODE_FUNCTION: {
+        Function* func = get_function(scope, node->token->value);
+        ASTNode* arg_name = func->args;
+        ASTNode* arg_value = node->children; // func->{args}
+        size_t passed_args_count = ast_count_children(node);
+        if (passed_args_count != func->arity) {
+            fprintf(stderr, "Invalid number of arguments for function: %s. Expected %lu but got %lu",
+                    func->name,
+                    func->arity, passed_args_count);
+            exit(1);
+        }
+
+        for (size_t i = 0; i < func->arity; i++) {
+            set_variable_value(func->scope, arg_name->token->value, _interpret_ast(scope, arg_value));
+            arg_name = arg_name->next;
+            arg_value = arg_value->next;
+        }
+
+        return _interpret_ast(func->scope, func->body);
+    }
     default: {
-        printf("unimplemented node: ");
+        printf("[ERROR] Unimplemented node: ");
         print_node(node);
         printf("\n");
         exit(1);
