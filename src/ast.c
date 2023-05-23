@@ -580,10 +580,11 @@ EvalScope* create_scope(EvalScope* parent) {
 }
 
 Variable* get_variable(EvalScope* scope, const char* name) {
-    Variable* var = scope->variables;
-    for (var = var->next; var; var = var->next) {
-        if (strcmp(var->name, name) == 0) {
-            return var;
+    for (; scope; scope = scope->parent) {
+        for (Variable* var = scope->variables->next; var; var = var->next) {
+            if (strcmp(var->name, name) == 0) {
+                return var;
+            }
         }
     }
     return NULL;
@@ -611,9 +612,11 @@ void set_variable_value(EvalScope* scope, const char* name, Result value) {
 }
 
 Function* get_function(EvalScope* scope, const char* name) {
-    for (Function* func = scope->functions->next; func; func = func->next) {
-        if (strcmp(func->name, name) == 0) {
-            return func;
+    for (; scope; scope = scope->parent) {
+        for (Function* func = scope->functions->next; func; func = func->next) {
+            if (strcmp(func->name, name) == 0) {
+                return func;
+            }
         }
     }
     return NULL;

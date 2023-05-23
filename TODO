@@ -1,4 +1,3 @@
-- Search variable/function in parent scope aswell
 - Function definition tests
 - Depict how nodes look in ast
 - Make better arguments parser
