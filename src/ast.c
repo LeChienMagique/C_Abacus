@@ -612,9 +612,14 @@ void set_variable_value(EvalScope* scope, const char* name, Result value) {
 }
 
 Function* get_function(EvalScope* scope, const char* name) {
+    EvalScope* starting_scope = scope;
     for (; scope; scope = scope->parent) {
         for (Function* func = scope->functions->next; func; func = func->next) {
             if (strcmp(func->name, name) == 0) {
+                if (starting_scope == func->scope) {
+                    fprintf(stderr, "[ERROR] Recursion is not allowed.");
+                    exit(1);
+                }
                 return func;
             }
         }
@@ -783,11 +788,15 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
 
     case NODE_FUNCTION: {
         Function* func = get_function(scope, node->token->value);
+        if (func == NULL) {
+            fprintf(stderr, "[ERROR] Function '%s' is not defined", node->token->value);
+            exit(1);
+        }
         ASTNode* arg_name = func->args;
         ASTNode* arg_value = node->children; // func->{args}
         size_t passed_args_count = ast_count_children(node);
         if (passed_args_count != func->arity) {
-            fprintf(stderr, "Invalid number of arguments for function: %s. Expected %lu but got %lu",
+            fprintf(stderr, "[ERROR] Invalid number of arguments for function: %s. Expected %lu but got %lu",
                     func->name,
                     func->arity, passed_args_count);
             exit(1);
