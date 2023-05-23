@@ -1,3 +1,4 @@
+# builtin functions
 sqrt(4)       # 2.
 sqrt(2)       # 1.414...
 sqrt(4 * 4)   # 4.
@@ -24,3 +25,17 @@ isprime(2)    # 1
 gcd(4, 6)     # 2
 gcd(-4, -6)   # -2
 gcd(10.2, 15) # 5
+
+
+# function definition
+def f() = 2                                   # 0
+def f() = 2 ; f()                             # 2
+def f(x) = x ; f(10)                          # 10
+def f(x, y) = x * y ; f(3, 4)                 # 12
+def f(x) = 2 * x ; def g(x) = x ^ 2 ; g(f(3)) # 36
+def f(x) = 2 * x ; def g(x) = f(x) ^ 2; g(3)  # 36
+a = 123 ; def f(x) = a + x ; f(27)            # 150
+
+# function redifinition
+def f(x) = x ; def f(x) = 2 * x ; f(5)       # 10
+def f(x) = x ; def f(x, y) = x + y ; f(5, 6) # 11
