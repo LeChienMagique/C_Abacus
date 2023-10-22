@@ -20,8 +20,6 @@ This is my first time doing these kind of things with C so the code structure ma
 ```
 ./main <input> [options] : run input
 ./main --repl : run in REPL mode
-./main test run          : run tests
-./main test save         : save expected results
 Options:
     --graph  Generate AST graph
     --debug  Prints debug information

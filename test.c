@@ -1,187 +1,242 @@
+#define _XOPEN_SOURCE 700
 #define _DEFAULT_SOURCE
+#define _POSIX_C_SOURCE = 200809L
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <dirent.h>
+#include <ftw.h>
+#include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
-#include "ast.h"
-#include "token.h"
+#include "src/ast.h"
+#include "src/token.h"
+#include "src/runtime.h"
 
-#define SV_IMPLEMENTATION
-#include "sv.h"
+#define UNUSED(x) (void)(x)
+#define FLOAT_STR_LEN 64
+#define INPUT_DELIM '~'
 
-static Result evaluate_input(char* input) {
-    Token* tokens = calloc(1, sizeof(Token));
-    Token* sentinel = tokens;
-    size_t index = 0;
-    while (index < strlen(input)) {
-        tokens->next = next_token(input, &index);
-        tokens = tokens->next;
-    }
+static int fail_count = 0;
+static int verbose_mode = 0;
 
-    ASTNode* ast = build_AST(&(sentinel->next));
-    return interpret_ast(ast);
+typedef struct
+{
+    const char *filename;
+    size_t line;
+
+    char *input;
+    int input_len;
+
+    char *expected;
+    int expected_len;
+} Testcase;
+
+
+const char *get_filename_ext(const char *filename)
+{
+    const char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename) return "";
+    return dot + 1;
 }
 
-char* read_file(const char* filepath) {
-    FILE* f = fopen(filepath, "r");
-    if (f == NULL) {
-        fprintf(stderr, "Could not open file %s: %s", filepath, strerror(errno));
-        exit(1);
-    }
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    rewind(f);
+static void free_testcase(Testcase *test)
+{
+    free(test->input);
+    free(test->expected);
+    free(test);
+}
 
-    char* content = malloc(fsize + 1);
-    fread(content, fsize, 1, f);
+static void shift_left_str(char *str)
+{
+    size_t i = 0;
+    while (str[i] != '\0')
+    {
+        str[i - 1] = str[i];
+        i++;
+    }
+    str[i - 1] = '\0';
+}
+
+static void trim_whitespaces(char *str)
+{
+    size_t i = 0;
+    while (str[i] == ' ')
+    {
+        i++;
+    }
+
+    for (size_t j = 0; j < i; j++)
+    {
+        shift_left_str(str + i);
+    }
+
+    while (str[i] != '\0')
+        i++;
+
+    i--;
+
+    while (str[i] == ' ')
+    {
+        i--;
+    }
+    str[i + 1] = '\0';
+}
+
+static Testcase *create_testcase(const char *filename, size_t line, FILE *f)
+{
+    Testcase *test = calloc(1, sizeof(Testcase));
+    test->filename = filename;
+    test->line = line;
+
+    size_t input_len = 0;
+    int input_red = getdelim(&(test->input), &input_len, INPUT_DELIM, f);
+    test->input[input_red - 1] = '\0';
+    trim_whitespaces(test->input);
+    test->input_len = strlen(test->input);
+
+    size_t expected_len = 0;
+    int expected_red = getline(&(test->expected), &expected_len, f);
+    if (expected_red > 0 && test->expected[expected_red - 1] == '\n')
+        test->expected[expected_red - 1] = '\0';
+    if (expected_red > 0)
+        trim_whitespaces(test->expected);
+    test->expected_len = strlen(test->expected);
+    return test;
+}
+
+static int run_testcase(Testcase *test)
+{
+    Result result = evaluate_input(test->input);
+    char *str_result = calloc(FLOAT_STR_LEN, 1);
+    if (result.type == RESULT_INT)
+    {
+        snprintf(str_result, FLOAT_STR_LEN, "%d", result.vali);
+    }
+    else
+    {
+        snprintf(str_result, FLOAT_STR_LEN, "%.10f", result.valf);
+    }
+
+    char *pos = strstr(test->expected, str_result);
+    if (pos == NULL)
+    {
+        fprintf(stderr, "%s:%zu:0: [FAIL] Expected: %s. Got: %s\n", test->filename, test->line, test->expected, str_result);
+        fail_count++;
+        free(str_result);
+        return 0;
+    }
+
+    if (verbose_mode)
+        printf("[PASSED] Input: %s. Expected: '%s'.\n", test->input, test->expected);
+    free(str_result);
+    return 1;
+}
+
+static int check_testcase_errors(Testcase *test)
+{
+    if (test->input_len == 0)
+    {
+        fprintf(stderr, "%s:%zu:0: [ERROR] Could not parse testcase. Input is empty.\n", test->filename, test->line);
+        free_testcase(test);
+        return 1;
+    }
+    else if (test->expected_len == -1)
+    {
+        fprintf(stderr, "%s:%zu:0: [ERROR] Could not parse testcase. Expected result is empty.\n", test->filename, test->line);
+        free_testcase(test);
+        return 1;
+    }
+    return 0;
+}
+
+static int test_file(const char *file)
+{
+    FILE *f = fopen(file, "r");
+
+    size_t line = 1;
+    while (!feof(f))
+    {
+        char c;
+        if ((c = fgetc(f)) == '\n')
+        {
+            line++;
+            continue;
+        }
+        else if (c == '#')
+        {
+            fscanf(f, "%*[^\n]\n");
+            line++;
+            continue;
+        }
+
+        ungetc(c, f);
+
+        Testcase *test = create_testcase(file, line++, f);
+
+        if (check_testcase_errors(test))
+            continue;
+
+        run_testcase(test);
+        free_testcase(test);
+    }
+
     fclose(f);
-    content[fsize] = '\0';
-    return content;
+    return fail_count;
 }
 
-String_View next_input(String_View* inputs) {
-    String_View line = sv_chop_by_delim(inputs, '\n');
-    String_View input = sv_trim(sv_chop_by_delim(&line, '#'));
-
-    return input;
+static int handle_tree_entry(const char *filepath, const struct stat *info,
+                             const int typeflag, struct FTW *pathinfo)
+{
+    UNUSED(info);
+    UNUSED(typeflag);
+    UNUSED(pathinfo);
+    if (strcmp(get_filename_ext(filepath), "test") != 0)
+    {
+        return 0;
+    }
+    test_file(filepath);
+    return 0;
 }
 
-void save_test(const char* filepath, const char* filename, const char* dirpath) {
-    char *results_path = malloc(strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output"));
-    results_path[0] = '\0';
-    strcat(results_path, dirpath);
-    strcat(results_path, "output/");
-    strcat(results_path, filename);
-    strcat(results_path, "_output");
-    FILE* results = fopen(results_path, "w+");
-    if (results == NULL) {
-        fprintf(stderr, "Could not open file %s: %s", results_path, strerror(errno));
-        exit(1);
-    }
+static int test_directory_tree(const char *const dirpath)
+{
+    if (dirpath == NULL || *dirpath == '\0')
+        return -1;
 
-    char* inputs = read_file(filepath);
-    String_View sv_inputs = sv_from_cstr(inputs);
+    fail_count = 0;
+    int result = nftw(dirpath, handle_tree_entry, 64, FTW_DEPTH);
+    if (result != 0)
+        return -1;
 
-    String_View sv_input;
-    while (sv_inputs.count > 0) {
-        sv_input = next_input(&sv_inputs);
-        if (sv_input.count == 0) {
-            continue;
-        }
-
-        char input[sv_input.count + 1];
-        sprintf(input, SV_Fmt, SV_Arg(sv_input));
-
-        Result result = evaluate_input(input);
-        if (result.type == RESULT_INT) {
-            fprintf(results, "%d\n", result.vali);
-            printf("%s = %d\n", input, result.vali);
-        } else {
-            fprintf(results, "%f\n", result.valf);
-            printf("%s = %f\n", input, result.valf);
-        }
-    }
-    free(inputs);
-    free(results_path);
+    return fail_count;
 }
 
-
-void run_test(const char* filepath, const char* filename, const char* dirpath) {
-    char results_path[strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output")];
-    results_path[0] = '\0';
-    strcat(results_path, dirpath);
-    strcat(results_path, "output/");
-    strcat(results_path, filename);
-    strcat(results_path, "_output");
-
-    char* inputs = read_file(filepath);
-    String_View sv_inputs = sv_from_cstr(inputs);
-
-    char* results = read_file(results_path);
-    String_View sv_outputs = sv_from_cstr(results);
-
-    String_View sv_input;
-    String_View sv_expected;
-    bool passed = true;
-    while (sv_inputs.count > 0 && sv_outputs.count > 0) {
-        sv_input = next_input(&sv_inputs);
-        if (sv_input.count == 0) {
-            continue;
-        }
-        sv_expected = sv_chop_by_delim(&sv_outputs, '\n');
-        char str_expected[sv_expected.count + 1];
-        sprintf(str_expected, SV_Fmt, SV_Arg(sv_expected));
-
-        char input[sv_input.count + 1];
-        sprintf(input, SV_Fmt, SV_Arg(sv_input));
-
-        // printf("[TESTING] %s = %s\n", input, str_expected);
-
-        Result result = evaluate_input(input);
-        char str_result[512]; // should be enough for everyone
-        if (result.type == RESULT_INT) {
-            sprintf(str_result, "%d", result.vali);
-        } else {
-            sprintf(str_result, "%f", result.valf);
-        }
-
-        if (strcmp(str_result, str_expected)) {
-            printf("[ERROR] '%s' got '%s' expected '%s'\n", input, str_result, str_expected);
-            passed = false;
-        } else {
-            // printf("[PASSED] %s = %s\n", input, str_result);
+int main(int argc, char **argv)
+{
+    char c;
+    while ((c = getopt (argc, argv, "v")) != -1)
+    {
+        switch (c)
+        {
+        case 'v':
+            verbose_mode = 1;
+            break;
+        case '?':
+            if (isprint(optopt))
+                fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+            else
+                fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+            return 1;
+        default:
+            abort();
         }
     }
-    free(inputs);
 
-    if (sv_inputs.count > 0 || sv_outputs.count > 0) {
-        printf("[ERROR] Different number of tests and results\n");
-    }
-
-    if (passed) {
-        printf("[PASSED] All tests passed for %s\n", filepath);
-    } else {
-        printf("[ERROR] At least one test failed for %s\n", filepath);
-    }
-}
-
-void tests_run() {
-    DIR* d;
-    struct dirent* dir;
-    d = opendir("./tests");
-    char file_path[1024];
-    if (d) {
-        while ((dir = readdir(d)) != NULL) {
-            if (dir->d_type == DT_REG) {
-                file_path[0] = '\0';
-                strcat(file_path, "./tests/");
-                strcat(file_path, dir->d_name);
-                printf("Running test %s...\n", dir->d_name);
-                run_test(file_path, dir->d_name, "./tests/");
-            }
-        }
-        closedir(d);
-    }
-}
-
-void tests_save() {
-    DIR* d;
-    struct dirent* dir;
-    d = opendir("./tests");
-    char file_path[1024];
-    if (d) {
-        while ((dir = readdir(d)) != NULL) {
-            if (dir->d_type == DT_REG) {
-                file_path[0] = '\0';
-                strcat(file_path, "./tests/");
-                strcat(file_path, dir->d_name);
-                printf("Saving output for test %s...\n", dir->d_name);
-                save_test(file_path, dir->d_name, "./tests/");
-            }
-        }
-        closedir(d);
-    }
+    test_directory_tree("tests");
+    printf("\nNumber of tests failed: %d\n", fail_count);
+    return 0;
 }

@@ -8,9 +8,10 @@ OBJ_DEBUG = debug.o ${OBJ}
 OBJ_TEST = test.o ${OBJ}
 OBJ_CRIT_TEST = crit_tests.o ${OBJ}
 
-all: main
+all: abacus
 
-main: ${OBJ} main.o src/test.o
+abacus: ${OBJ} main.o
+	${CC} ${CFLAGS} $^ ${LDLIBS} -o $@
 
 debug: CFLAGS+=-g -fsanitize=address
 debug: LDLIBS+=-fsanitize=address 
@@ -35,6 +36,6 @@ check:
 .PHONY: clean
 
 clean:
-	${RM} main check test
+	${RM} abacus check test
 	${RM} *.gc* src/*.gc* report.*
-	${RM} ${OBJ} main.o debug.o test.o
+	${RM} ${OBJ} ${OBJ_TEST} ${OBJ_DEBUG} main.o
