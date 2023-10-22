@@ -36,6 +36,6 @@ check:
 .PHONY: clean
 
 clean:
-	${RM} abacus check test
+	${RM} abacus check debug
 	${RM} *.gc* src/*.gc* report.*
 	${RM} ${OBJ} ${OBJ_TEST} ${OBJ_DEBUG} main.o
