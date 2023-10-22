@@ -33,7 +33,7 @@ I guess this is buildable on any Linux system (idk much about compatibility and 
 ### Test files
 A test file is a `.test` file located in the `tests` folder. Testcases can be defined in these files with a straightforward syntax.
 
-## Testcase
+#### Testcase
 A test case can be defined like this:
 `<expression> ~ <expected>`
 
