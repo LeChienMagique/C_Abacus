@@ -33,11 +33,11 @@ Options:
 I guess this is buildable on any Linux system (idk much about compatibility and portability)
 
 ### Test files
-A test file is a text file located in the `tests` folder. Testcases can be defined in these files with a straightforward syntax.
+A test file is a `.test` file located in the `tests` folder. Testcases can be defined in these files with a straightforward syntax.
 
 ## Testcase
 A test case can be defined like this:
-`<expression> = <expected>`
+`<expression> ~ <expected>`
 
 A test case is single line.
-You can add a comment with `#`, the entire remaining of the line will be treated as a comment.
+You can add a comment with `#`. It must be the first character of the line.

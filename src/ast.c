@@ -92,7 +92,8 @@ bool check_token_type(Token* token, TokenType expected) {
 void advance_tokens(Token** tokens) {
     Token* next = (*tokens)->next;
     TokenType type = (*tokens)->type;
-    if (type == TOKEN_OPARENTHESIS || type == TOKEN_CPARENTHESIS) {
+    if (type == TOKEN_OPARENTHESIS || type == TOKEN_CPARENTHESIS
+        || type == TOKEN_COMMA) {
         if ((*tokens)->value) {
             free((*tokens)->value);
         }

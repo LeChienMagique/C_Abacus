@@ -6,11 +6,11 @@
 #include <string.h>
 #include <errno.h>
 
-#include "./ast.h"
-#include "./token.h"
+#include "ast.h"
+#include "token.h"
 
 #define SV_IMPLEMENTATION
-#include "./sv.h"
+#include "sv.h"
 
 static Result evaluate_input(char* input) {
     Token* tokens = calloc(1, sizeof(Token));
@@ -50,7 +50,7 @@ String_View next_input(String_View* inputs) {
 }
 
 void save_test(const char* filepath, const char* filename, const char* dirpath) {
-    char results_path[strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output")];
+    char *results_path = malloc(strlen("output/") + strlen(dirpath) + strlen(filename) + strlen("_output"));
     results_path[0] = '\0';
     strcat(results_path, dirpath);
     strcat(results_path, "output/");
@@ -85,6 +85,7 @@ void save_test(const char* filepath, const char* filename, const char* dirpath) 
         }
     }
     free(inputs);
+    free(results_path);
 }
 
 
@@ -146,7 +147,6 @@ void run_test(const char* filepath, const char* filename, const char* dirpath) {
         printf("[ERROR] At least one test failed for %s\n", filepath);
     }
 }
-
 
 void tests_run() {
     DIR* d;

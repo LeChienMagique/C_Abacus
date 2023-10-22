@@ -1,16 +1,40 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -g -std=c11 -pedantic
+CFLAGS=-Wall -Werror -Wextra -std=c11 -pedantic
 LDFLAGS=
 LDLIBS=-lm
 
-SRC = main.c ./src/token.c ./src/ast.c ./src/test.c ./src/ast_operations.c ./src/errors.c
+OBJ = ./src/token.o ./src/ast.o ./src/ast_operations.o ./src/runtime.o
+OBJ_DEBUG = debug.o ${OBJ}
+OBJ_TEST = test.o ${OBJ}
+OBJ_CRIT_TEST = crit_tests.o ${OBJ}
 
 all: main
 
-main:
-	${CC} ${CFLAGS} ${SRC} ${LDLIBS} -o abacus
+main: ${OBJ} main.o src/test.o
+
+debug: CFLAGS+=-g -fsanitize=address
+debug: LDLIBS+=-fsanitize=address 
+debug: ${OBJ_DEBUG}
+
+check: CFLAGS+=-g -fsanitize=address -fprofile-arcs -ftest-coverage
+check: LDLIBS+=-fsanitize=address -lgcov
+check: ${OBJ_TEST}
+check:
+	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
+	./check -v
+	gcovr --html report.html --html-nested --html-syntax-highlighting
+
+# check: CFLAGS+=-fprofile-arcs -ftest-coverage -g -fsanitize=address -lcriterion
+# check: LDLIBS+=-fsanitize=address -lcriterion
+# check: $(OBJ_CRIT_TEST)
+# check:
+# 	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
+# 	./$@ --verbose --always-succeed
+# 	gcovr --html report.html --html-nested --html-syntax-highlighting
 
 .PHONY: clean
 
 clean:
-	${RM} abacus
+	${RM} main check test
+	${RM} *.gc* src/*.gc* report.*
+	${RM} ${OBJ} main.o debug.o test.o

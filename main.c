@@ -7,136 +7,22 @@
 
 #include "./src/token.h"
 #include "./src/ast.h"
-#include "./src/test.h"
-
-int GENERATE_GRAPH = 0;
-int DEBUG_MODE = 0;
+#include "./src/runtime.h"
 
 void print_usage() {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  ./main <input> [options]          Run input\n");
     fprintf(stderr, "  ./main --repl                     Run in REPL mode\n");
-    fprintf(stderr, "  ./main test run                   Run tests\n");
-    fprintf(stderr, "  ./main test save                  Save expected results\n");
+    // fprintf(stderr, "  ./main test run                   Run tests\n");
+    // fprintf(stderr, "  ./main test save                  Save expected results\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  --debug                           Print debug informations\n");
     fprintf(stderr, "  --graph                           Generate AST graph\n");
     exit(1);
 }
 
-static const char* NODE_FMT[NODE_COUNT + 1] = {"INT", "FLOAT", "+", "-", "+", "-", "/", "*", "^", "%", "==", "=", "FUNCDEF", "FUNC", "SYMBOL", "Expr", "Program", "!NodeCount!"};
-
-void write_node_label(FILE* f, ASTNode* node) {
-    switch (node->type) {
-    case NODE_INT: {
-        fprintf(f, "[label=\"%d\"]\n", *((int*) node->value));
-    }
-    break;
-    case NODE_FLOAT: {
-        fprintf(f, "[label=\"%f\"]\n", *((double*) node->value));
-    }
-    break;
-    case NODE_SYMBOL: {
-        fprintf(f, "[label=\"%s\"]\n", node->token->value);
-    }
-    break;
-    case NODE_FUNCTION: {
-        fprintf(f, "[label=\"Func(%s)\"]\n", node->token->value);
-    }
-    break;
-    case NODE_FUNCDEF: {
-        fprintf(f, "[label=\"FuncDef\"]\n");
-    }
-    break;
-    default: {
-        fprintf(f, "[label=\"%s\"]", NODE_FMT[node->type]);
-    }
-    }
-}
-
-int _generate_dot(FILE* f, ASTNode* node, int parent, int nextid) {
-    if (node == NULL) {
-        return nextid;
-    }
-    int id = nextid++;
-
-    fprintf(f, "\tnode%d", id);
-    write_node_label(f, node);
-    if (parent >= 0) {
-        fprintf(f, "\tnode%d -- node%d\n", parent, id);
-    }
-
-    ASTNode* child = node->children;
-    if (node->children) {
-        for (; child->next; child = child->next) {
-            nextid = _generate_dot(f, child, id, nextid);
-        }
-    }
-    return _generate_dot(f, child, id, nextid);
-}
-
-void generate_dot(ASTNode* ast) {
-    FILE* fp = fopen("graph.dot", "w+");
-    if (fp == NULL) {
-        fprintf(stderr, "Could not open file 'graph.dot': %s", strerror(errno));
-        exit(1);
-    }
-    fprintf(fp, "graph {\n");
-    // fprintf(fp, "bgcolor=\"grey\"\n");
-    _generate_dot(fp, ast, -1, 0);
-    fprintf(fp, "}");
-    fclose(fp);
-    system("dot -Tsvg graph.dot > graph.svg");
-}
-
-Result evaluate_input(char* input) {
-    Token* tokens = calloc(1, sizeof(Token));
-    Token* sentinel = tokens;
-    size_t index = 0;
-    while (index < strlen(input)) {
-        tokens->next = next_token(input, &index);
-        tokens = tokens->next;
-    }
-    if (DEBUG_MODE) {
-        printf("Tokens:\n");
-        for (Token* token = sentinel->next; token; token = token->next) {
-            print_token(stdout, token);
-            printf("\n");
-        }
-        printf("\n");
-    }
-
-    ASTNode* ast = build_AST(&(sentinel->next));
-
-    if (DEBUG_MODE) {
-        print_AST(ast);
-        printf("\n\n");
-    }
-    if (GENERATE_GRAPH) {
-        generate_dot(ast);
-    }
-
-    Result result = interpret_ast(ast);
-
-    // tokens are actually freed during free_AST
-    free_AST(ast);
-    free(sentinel);
-    return result;
-}
-
-void run(char* input) {
-    Result result = evaluate_input(input);
-
-    if (result.type == RESULT_INT) {
-        // printf("%s = %d\n", input, result.vali);
-        printf("%d\n", result.vali);
-    } else {
-        // printf("%s = %f\n", input,  result.valf);
-        printf("%f\n", result.valf);
-    }
-}
-
 void repl_mode() {
+    // TODO: use getline instead of hardcoded buffer
     char input[1024]; // should be enough
     bool quit = false;
 
@@ -190,25 +76,25 @@ int main(int argc, char** argv) {
     */
     if (argc >= 2) {
         // test
-        if (strcmp(argv[1], "test") == 0) {
-            if (argc != 3) {
-                fprintf(stderr, "Wrong number of arguments\n");
-                print_usage();
-            }
-            if (strcmp(argv[1], "test") != 0) {
-                fprintf(stderr, "Unknown argument: %s\n", argv[1]);
-                print_usage();
-            }
-            if (strcmp(argv[2], "run") == 0) {
-                tests_run();
-            } else if (strcmp(argv[2], "save") == 0) {
-                tests_save();
-            } else {
-                fprintf(stderr, "Unknown argument: %s\n", argv[2]);
-                print_usage();
-            }
-        }
-        else if (strcmp(argv[1], "--repl") == 0) {
+        // if (strcmp(argv[1], "test") == 0) {
+        //     if (argc != 3) {
+        //         fprintf(stderr, "Wrong number of arguments\n");
+        //         print_usage();
+        //     }
+        //     if (strcmp(argv[1], "test") != 0) {
+        //         fprintf(stderr, "Unknown argument: %s\n", argv[1]);
+        //         print_usage();
+        //     }
+        //     if (strcmp(argv[2], "run") == 0) {
+        //         tests_run();
+        //     } else if (strcmp(argv[2], "save") == 0) {
+        //         tests_save();
+        //     } else {
+        //         fprintf(stderr, "Unknown argument: %s\n", argv[2]);
+        //         print_usage();
+        //     }
+        // }
+        if (strcmp(argv[1], "--repl") == 0) {
             repl_mode();
             exit(0);
         }
