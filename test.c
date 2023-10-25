@@ -21,6 +21,7 @@
 #define INPUT_DELIM '~'
 
 static int fail_count = 0;
+static int pass_count = 0;
 static int verbose_mode = 0;
 
 typedef struct
@@ -132,6 +133,8 @@ static int run_testcase(Testcase *test)
 
     if (verbose_mode)
         printf("[PASSED] Input: %s. Expected: '%s'.\n", test->input, test->expected);
+
+    pass_count++;
     free(str_result);
     return 1;
 }
@@ -237,6 +240,7 @@ int main(int argc, char **argv)
     }
 
     test_directory_tree("tests");
-    printf("\nNumber of tests failed: %d\n", fail_count);
+    printf("\nNumber of tests passed: %d\n", pass_count);
+    printf("Number of tests failed: %d\n", fail_count);
     return 0;
 }

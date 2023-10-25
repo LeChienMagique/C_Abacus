@@ -145,12 +145,14 @@ bool is_builtin_function(const char* func_name) {
 }
 
 
-int get_bultin_function_arity(ASTNode* func) {
+int get_builtin_function_arity(ASTNode* func) {
     char* func_name = (char*) func->token->value;
+#ifdef _DEBUG
     if (func_name == NULL) {
         fprintf(stderr, "[ERROR] func_name = NULL");
         exit(1);
     }
+#endif
 
     if (strcmp(func_name, "sqrt") == 0) {
         return 1;
@@ -173,6 +175,7 @@ int get_bultin_function_arity(ASTNode* func) {
     else if (strcmp(func_name, "gcd") == 0) {
         return 2;
     }
+#ifdef _DEBUG
     else {
         // should print to stderr
         printf("[ERROR] Arity not implemented for: ");
@@ -180,11 +183,13 @@ int get_bultin_function_arity(ASTNode* func) {
         printf("\n");
         exit(1);
     }
+#endif
+    exit(1); // unreachable
 }
 
 int get_function_arity(EvalScope* scope, ASTNode* func_node) {
     if (is_builtin_function(func_node->token->value)) {
-        return get_bultin_function_arity(func_node);
+        return get_builtin_function_arity(func_node);
     }
 
     Function* func = get_function(scope, func_node->token->value);
@@ -197,23 +202,27 @@ bool ast_is_operator(ASTNode* node) {
 
 OpArity get_operator_arity(ASTNode* optor) {
     OpArity ar = OPERATOR_ARITY[optor->type];
+#ifdef _DEBUG
     if ((int) ar == -1) {
         printf("[ERROR] Operator arity not implemented for: ");
         print_node(optor);
         printf("\n");
         exit(1);
     }
+#endif
     return ar;
 }
 
 OpPrecedence get_operator_precedence(ASTNode* optor) {
     OpPrecedence prec = OPERATOR_PRECEDENCE[optor->type];
+#ifdef _DEBUG
     if ((int) prec == -1) {
         printf("[ERROR] Operator precedence not implemented for: ");
         print_node(optor);
         printf("\n");
         exit(1);
     }
+#endif
     return prec;
 }
 
@@ -407,7 +416,7 @@ ASTNode* ast_next_expr(Token** tokens) {
         append_child(expr, operand);
     }
 
-    // {operator operand}
+    // {operator }
     ASTNode* optor = ast_next_operator(tokens);
     if (optor != NULL) {
         while (optor != NULL) {
@@ -508,14 +517,12 @@ ASTNode* ast_next_funcdef(Token** tokens) {
     return funcdef;
 }
 
-
 void dump_tokens(Token** tokens) {
     while (*tokens) {
         print_token(stdout, *tokens);
         printf(" | ");
         advance_tokens(tokens);
     }
-
 }
 
 ASTNode* build_AST(Token** tokens) {
@@ -775,6 +782,12 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
     }
     case NODE_FUNCDEF: {
         ASTNode* func_node = node->children;
+        if (is_builtin_function(func_node->token->value))
+        {
+            fprintf(stderr, "[ERROR] Trying to redefine '%s' builtin function.\n", func_node->token->value);
+            exit(1);
+        }
+
         int arity = 0;
         for (ASTNode* arg = func_node->children; arg; arg = arg->next) {
             arity++;
@@ -812,10 +825,12 @@ Result _interpret_ast(EvalScope* scope, ASTNode* node) {
         return _interpret_ast(func->scope, func->body);
     }
     default: {
+#ifdef _DEBUG
         printf("[ERROR] Unimplemented node: ");
         print_node(node);
         printf("\n");
-        exit(1);
+#endif
+        exit(1); // unreachable
     }
     }
 }
